@@ -1,0 +1,8 @@
+wtforms
+passlib
+flask
+pandas
+requests
+sqlalchemy
+click
+pymysql

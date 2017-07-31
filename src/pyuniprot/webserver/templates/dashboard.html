@@ -1,0 +1,25 @@
+{%  extends 'layout.html' %}
+
+{% block body %}
+
+    <h1>Dashboard</h1>
+    <hr>
+
+    <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Recommended short name</th>
+            <th>Recommended full name</th>
+        </tr>
+
+    {% for entry in entries %}
+        <tr>
+            <th>{{ entry.id }}</th>
+            <th>{{ entry.name }}</th>
+            <th>{{ entry.recommended_short_name }}</th>
+            <th>{{ entry.recommended_full_name }}</th>
+        </tr>
+    {% endfor %}
+    </table>
+{% endblock %}
