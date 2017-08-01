@@ -5,6 +5,7 @@ import os
 import sys
 import gzip
 import configparser
+import time
 
 import numpy as np
 
@@ -66,8 +67,12 @@ def get_connection_string(connection=None):
 
 def gunzip_file(path):
     """gunzip path and returns path to extracted file
-    :type str path: path to gzipped file
+
+    :param str path: path to gzip file
+    :return: path to extracted file
+    :rtype: pathlib.Path
     """
+
     gzipped_path = Path(path)
     extracted_path = Path(path[:-3])
 
@@ -112,6 +117,7 @@ class BaseDbManager(object):
             self.__init__()
 
     def set_connection_string_by_user_input(self):
+        """If no connection is available request of connection string by user"""
         user_connection = input(
             bcolors.WARNING + "\nFor any reason connection to " + bcolors.ENDC +
             bcolors.FAIL + "{}".format(self.connection) + bcolors.ENDC +
@@ -150,10 +156,7 @@ class BaseDbManager(object):
         models.Base.metadata.create_all(self.engine, checkfirst=checkfirst)
 
     def _drop_tables(self):
-        """drops all tables in the database
-
-        :return: 
-        """
+        """drops all tables in the database"""
         log.info('drop tables in {}'.format(self.engine.url))
         self.session.commit()
         models.Base.metadata.drop_all(self.engine)
@@ -186,7 +189,9 @@ class DbManager(BaseDbManager):
         3. creates all tables in database
         4. import XML
         5. close session
-        
+
+        :param taxids: list of NCBI taxonomy identifier
+        :type taxids: list
         :param url: iterable of URL strings
         :type url: str
         :param force_download: force method to download
@@ -234,12 +239,13 @@ class DbManager(BaseDbManager):
                             number_of_entries = 0
 
     def insert_entries(self, entries_xml, taxids):
+        """insert UniProt entries from XML"""
         entries = etree.fromstringlist(entries_xml)
         for entry in entries:
             self.insert_entry(entry, taxids)
 
     def insert_entry(self, entry, taxids):
-
+        """insert UniProt entry"""
         entry_dict = dict(entry.attrib)
         entry_dict['created'] = datetime.strptime(entry_dict['created'], '%Y-%m-%d')
         entry_dict['modified'] = datetime.strptime(entry_dict['modified'], '%Y-%m-%d')
@@ -278,7 +284,8 @@ class DbManager(BaseDbManager):
         )
         return entry_dict
 
-    def get_sequence(self, entry):
+    @classmethod
+    def get_sequence(cls, entry):
         seq_tag = entry.find("./sequence")
         return models.Sequence(sequence=seq_tag.text)
 
@@ -295,7 +302,8 @@ class DbManager(BaseDbManager):
 
         return tissue_in_references
 
-    def get_tissue_specificities(self, entry):
+    @classmethod
+    def get_tissue_specificities(cls, entry):
         tissue_specificities = []
 
         query = "./comment[@type='tissue specificity']/text"
@@ -332,7 +340,8 @@ class DbManager(BaseDbManager):
 
         return keywords
 
-    def get_entry_name(self, entry):
+    @classmethod
+    def get_entry_name(cls, entry):
         name = entry.find('./name').text
         return name
 
@@ -361,35 +370,41 @@ class DbManager(BaseDbManager):
             disease_comments.append(models.DiseaseComment(**value_dict))
         return disease_comments
 
-    def get_alternative_full_names(self, entry):
+    @classmethod
+    def get_alternative_full_names(cls, entry):
         names = []
         query = "./protein/alternativeName/fullName"
         for name in entry.findall(query):
             names.append(models.AlternativeFullName(name=name.text))
         return names
 
-    def get_alternative_short_names(self, entry):
+    @classmethod
+    def get_alternative_short_names(cls, entry):
         names = []
         query = "./protein/alternativeName/shortName"
         for name in entry.findall(query):
             names.append(models.AlternativeShortName(name=name.text))
         return names
 
-    def get_ec_numbers(self, entry):
+    @classmethod
+    def get_ec_numbers(cls, entry):
         ec_numbers = []
         query = "./protein/recommendedName/ecNumber"
         for ec in entry.findall(query):
             ec_numbers.append(models.ECNumber(ec_number=ec.text))
         return ec_numbers
 
-    def get_gene_name(self, entry):
+    @classmethod
+    def get_gene_name(cls, entry):
         gene_name = entry.find("gene/name[@type='primary']")
         return gene_name.text if isinstance(gene_name, etree._Element) else None
 
-    def get_accessions(self, entry):
+    @classmethod
+    def get_accessions(cls, entry):
         return [models.Accession(accession=x.text) for x in entry.findall("./accession")]
 
-    def get_db_references(self, entry):
+    @classmethod
+    def get_db_references(cls, entry):
         db_refs = []
         query = "./dbReference"
         for db_ref in entry.findall(query):
@@ -398,7 +413,8 @@ class DbManager(BaseDbManager):
             db_refs.append(models.DbReference(**db_ref_dict))
         return db_refs
 
-    def get_features(self, entry):
+    @classmethod
+    def get_features(cls, entry):
         features = []
         for feature in entry.findall("./feature"):
             attrib_dict = dict(feature.attrib)
@@ -411,11 +427,13 @@ class DbManager(BaseDbManager):
             features.append(models.Feature(**feature_dict))
         return features
 
-    def get_taxid(self, entry):
+    @classmethod
+    def get_taxid(cls, entry):
         query = "./organism/dbReference[@type='NCBI Taxonomy']"
         return int(entry.find(query).get('id'))
 
-    def get_recommended_protein_name(self, entry):
+    @classmethod
+    def get_recommended_protein_name(cls, entry):
         query_full = "./protein/recommendedName/fullName"
         full_name = entry.find(query_full).text
 
@@ -427,7 +445,8 @@ class DbManager(BaseDbManager):
 
         return full_name, short_name
 
-    def get_organism_hosts(self, entry):
+    @classmethod
+    def get_organism_hosts(cls, entry):
         query = "./organismHost/dbReference[@type='NCBI Taxonomy']"
         return [models.OrganismHost(taxid=x.get('id')) for x in entry.findall(query)]
 
@@ -447,14 +466,16 @@ class DbManager(BaseDbManager):
             pmids.append(self.pmids[pmid_number])
         return pmids
 
-    def get_functions(self, entry):
+    @classmethod
+    def get_functions(cls, entry):
         comments = []
         for comment in entry.findall("./comment[@type='function']"):
             text = comment.find('./text').text
             comments.append(models.Function(text=text))
         return comments
 
-    def get_dtypes(self, sqlalchemy_model):
+    @classmethod
+    def get_dtypes(cls, sqlalchemy_model):
         mapper = inspect(sqlalchemy_model)
         dtypes = {x.key: alchemy_pandas_dytpe_mapper[type(x.type)] for x in mapper.columns if x.key != 'id'}
         return dtypes
@@ -484,14 +505,51 @@ class DbManager(BaseDbManager):
         file_name = urlparse(url).path.split('/')[-1]
         return os.path.join(cls.pyuniprot_data_dir, file_name)
 
-    def export_obo(self, path_to_export_file):
+    def export_obo(self, path_to_export_file, name_of_ontology="uniprot", taxids=None):
         """
-        export to OBO (http://www.obofoundry.org/) file
+        export complete database to OBO (http://www.obofoundry.org/) file
 
-        :return:
+        :param path_to_export_file: path to export file
+        :param taxids: NCBI taxonomy identifiers to export (optional)
         """
-        self
-        fd = open(path_to_export_file)
+
+        fd = open(path_to_export_file, 'w')
+
+        header = "format-version: 0.1\ndata: {}\n".format(time.strftime("%d:%m:%Y %H:%M"))
+        header += "ontology: {}\n".format(name_of_ontology)
+        header += 'synonymtypedef: GENE_NAME "GENE NAME"\nsynonymtypedef: ALTERNATIVE_NAME "ALTERNATIVE NAME"\n'
+
+        fd.write(header)
+
+        query = self.session.query(models.Entry).limit(100)
+
+        if taxids:
+            query = query.filter(models.Entry.taxid.in_(taxids))
+
+        for entry in query.all():
+
+            fd.write('\n[Term]\nid: SWISSPROT:{}\n'.format(entry.accessions[0]))
+
+            if len(entry.accessions) > 1:
+                for accession in entry.accessions[1:]:
+                    fd.write('alt_id: {}\n'.format(accession))
+
+            fd.write('name: {}\n'.format(entry.recommended_full_name))
+
+            for alternative_full_name in entry.alternative_full_names:
+                fd.write('synonym: "{}" EXACT ALTERNATIVE_NAME []\n'.format(alternative_full_name.name))
+
+            for alternative_short_name in entry.alternative_short_names:
+                fd.write('synonym: "{}" EXACT ALTERNATIVE_NAME []\n'.format(alternative_short_name.name))
+
+            fd.write('synonym: "{}" EXACT GENE_NAME []\n'.format(entry.gene_name))
+
+            for xref in entry.db_references:
+                if xref.type in ['GO', 'HGNC']:
+                    xref.identifier = ':'.join(xref.identifier.split(':')[1:])
+                fd.write('xref: {}:{}\n'.format(xref.type, xref.identifier.replace('\\', '\\\\')))
+
+        fd.close()
 
 
 def update(connection=None, urls=None, force_download=False, taxids=None):
@@ -545,3 +603,15 @@ def set_connection(connection=defaults.sqlalchemy_connection_string_default):
         config.set('database', 'sqlalchemy_connection_string', connection)
         with open(cfp, 'w') as configfile:
             config.write(configfile)
+
+
+def export_obo(path_to_file, connection=None):
+    """export database to obo file
+
+    :param path_to_file: path to export file
+    :param connection: connection string (optional)
+    :return:
+    """
+    db = DbManager(connection)
+    db.export_obo(path_to_export_file=path_to_file)
+    db.session.close()
