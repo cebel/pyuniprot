@@ -13,12 +13,12 @@ Installation
 """
 
 from . import manager
-from .manager.database import update
+from .manager.database import update, export_obo
 from .manager.database import set_connection, set_mysql_connection
 
 query = manager.query.QueryManager
 
-__all__ = ['update', 'query', 'set_connection', 'set_mysql_connection']
+__all__ = ['update', 'export_obo', 'query', 'set_connection', 'set_mysql_connection']
 
 __version__ = '0.0.1'
 
