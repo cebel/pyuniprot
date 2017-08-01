@@ -1,25 +1,28 @@
 # -*- coding: utf-8 -*-
 """PyCTD loads all CTD content in the database. Content is available via functions."""
 import logging
-from lxml import etree
-import codecs
+import os
+import sys
+import gzip
 import configparser
 
-from ..constants import PYUNIPROT_DATA_DIR, PYUNIPROT_DIR
+import numpy as np
 
-import os
+from datetime import datetime
+from pathlib import Path
+from lxml import etree
 from configparser import RawConfigParser
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.engine import reflection
 from sqlalchemy.sql import sqltypes
-import numpy as np
 
 from . import defaults
 from . import models
 from ..constants import bcolors
+from ..constants import PYUNIPROT_DATA_DIR, PYUNIPROT_DIR
 
-import sys
+
 if sys.version_info[0] == 3:
     from urllib.request import urlretrieve
     from requests.compat import urlparse
@@ -35,6 +38,50 @@ alchemy_pandas_dytpe_mapper = {
     sqltypes.Integer: np.float,
     sqltypes.REAL: np.double
 }
+
+
+def get_connection_string(connection=None):
+    """return SQLAlchemy connection string if it is set
+
+    :param connection: get the SQLAlchemy connection string #TODO
+    :rtype: str
+    """
+    if not connection:
+        config = configparser.ConfigParser()
+        cfp = defaults.config_file_path
+        if os.path.exists(cfp):
+            log.info('fetch database configuration from %s', cfp)
+            config.read(cfp)
+            connection = config['database']['sqlalchemy_connection_string']
+            log.info('load connection string from %s: %s', cfp, connection)
+        else:
+            with open(cfp, 'w') as config_file:
+                connection = defaults.sqlalchemy_connection_string_default
+                config['database'] = {'sqlalchemy_connection_string': connection}
+                config.write(config_file)
+                log.info('create configuration file %s', cfp)
+
+    return connection
+
+
+def gunzip_file(path):
+    """gunzip path and returns path to extracted file
+    :type str path: path to gzipped file
+    """
+    gzipped_path = Path(path)
+    extracted_path = Path(path[:-3])
+
+    if not extracted_path.exists() and gzipped_path.is_file() and gzipped_path.suffix == '.gz':
+        gzipped_file = gzip.open(str(gzipped_path), 'rb')
+        extracted_file = extracted_path.open('wb')
+        extracted_file.write(gzipped_file.read())
+        gzipped_file.close()
+        extracted_file.close()
+
+    if extracted_path.is_file():
+        return extracted_path
+    else:
+        return None
 
 
 class BaseDbManager(object):
@@ -55,7 +102,7 @@ class BaseDbManager(object):
         log.addHandler(handler)
 
         try:
-            self.connection = self.get_connection_string(connection)
+            self.connection = get_connection_string(connection)
             self.engine = create_engine(self.connection, echo=echo)
             self.inspector = reflection.Inspector.from_engine(self.engine)
             self.sessionmaker = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
@@ -91,29 +138,6 @@ class BaseDbManager(object):
         if not (user_connection or user_connection.strip()):
             user_connection = defaults.sqlalchemy_connection_string_default
         set_connection(user_connection.strip())
-
-    @staticmethod
-    def get_connection_string(connection=None):
-        """return sqlalchemy connection string if it is set
-        
-        :param connection: get the SQLAlchemy connection string #TODO
-        :return: 
-        """
-        if not connection:
-            config = configparser.ConfigParser()
-            cfp = defaults.config_file_path
-            if os.path.exists(cfp):
-                log.info('fetch database configuration from {}'.format(cfp))
-                config.read(cfp)
-                connection = config['database']['sqlalchemy_connection_string']
-                log.info('load connection string from {}: {}'.format(cfp, connection))
-            else:
-                with open(cfp, 'w') as config_file:
-                    connection = defaults.sqlalchemy_connection_string_default
-                    config['database'] = {'sqlalchemy_connection_string': connection}
-                    config.write(config_file)
-                    log.info('create configuration file {}'.format(cfp))
-        return connection
 
     def _create_tables(self, checkfirst=True):
         """creates all tables from models in your database
@@ -183,7 +207,10 @@ class DbManager(BaseDbManager):
         number_of_entries = 0
         interval = 100
         start = False
-        with open(xml_gzipped_file_path[:-3], 'r') as fd:
+
+        xml_file = gunzip_file(xml_gzipped_file_path)
+
+        with xml_file.open('r') as fd:
             for line in fd:
                 end_of_file = line.startswith("</uniprot>")
                 if line.startswith("<entry "):
@@ -214,6 +241,8 @@ class DbManager(BaseDbManager):
     def insert_entry(self, entry, taxids):
 
         entry_dict = dict(entry.attrib)
+        entry_dict['created'] = datetime.strptime(entry_dict['created'], '%Y-%m-%d')
+        entry_dict['modified'] = datetime.strptime(entry_dict['modified'], '%Y-%m-%d')
 
         taxid = self.get_taxid(entry)
 
@@ -430,8 +459,8 @@ class DbManager(BaseDbManager):
         dtypes = {x.key: alchemy_pandas_dytpe_mapper[type(x.type)] for x in mapper.columns if x.key != 'id'}
         return dtypes
 
-    @staticmethod
-    def download(url=None, force_download=False):
+    @classmethod
+    def download(cls, url=None, force_download=False):
         """Downloads uniprot_sprot.xml.gz from URL
     
         :param url: UniProt gzipped URL
@@ -440,20 +469,20 @@ class DbManager(BaseDbManager):
         :type force_download: bool
         """
         url = url if url else defaults.XML_SPROT_URL
-        file_path = DbManager.get_path_to_file_from_url(url)
+        file_path = cls.get_path_to_file_from_url(url)
         if force_download or not os.path.exists(file_path):
             log.info('download {}'.format(file_path))
             urlretrieve(url, file_path)
         return file_path
 
-    @staticmethod
-    def get_path_to_file_from_url(url):
+    @classmethod
+    def get_path_to_file_from_url(cls, url):
         """standard file path
         
         :param str url: CTD download URL 
         """
         file_name = urlparse(url).path.split('/')[-1]
-        return os.path.join(DbManager.pyuniprot_data_dir, file_name)
+        return os.path.join(cls.pyuniprot_data_dir, file_name)
 
     def export_obo(self, path_to_export_file):
         """
@@ -461,6 +490,7 @@ class DbManager(BaseDbManager):
 
         :return:
         """
+        self
         fd = open(path_to_export_file)
 
 
@@ -482,9 +512,15 @@ def update(connection=None, urls=None, force_download=False, taxids=None):
     db.session.close()
 
 
-def set_mysql_connection(host='localhost', user='pyuniprot_user', passwd='pyuniprot_passwd', db='pyuniprot', charset='utf8'):
-    set_connection('mysql+pymysql://{user}:{passwd}@{host}/{db}?charset={charset}'
-                   .format(host=host, user=user, passwd=passwd, db=db, charset=charset))
+def set_mysql_connection(host='localhost', user='pyuniprot_user', passwd='pyuniprot_passwd', db='pyuniprot',
+                         charset='utf8'):
+    set_connection('mysql+pymysql://{user}:{passwd}@{host}/{db}?charset={charset}'.format(
+        host=host,
+        user=user,
+        passwd=passwd,
+        db=db,
+        charset=charset)
+    )
 
 
 def set_test_connection():
@@ -509,5 +545,3 @@ def set_connection(connection=defaults.sqlalchemy_connection_string_default):
         config.set('database', 'sqlalchemy_connection_string', connection)
         with open(cfp, 'w') as configfile:
             config.write(configfile)
-
-
