@@ -6,3 +6,4 @@ requests
 sqlalchemy
 click
 pymysql
+lxml
