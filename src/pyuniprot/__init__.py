@@ -24,7 +24,7 @@ __version__ = '0.0.1'
 
 __title__ = 'PyUniProt'
 __description__ = 'Importing and querying UniProt'
-__url__ = 'https://github.com/cebel/pyctd'
+__url__ = 'https://github.com/cebel/pyuniprot'
 
 __author__ = 'Christian Ebeling'
 __email__ = 'christian.ebeling@scai.fraunhofer.de'
