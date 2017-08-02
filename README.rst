@@ -113,7 +113,7 @@ The updating process will download the *uniprot_sprot.xml.gz* provided by the Un
 .. warning:: Please note that files needs more than 6 Gb of disk space and the update takes ~2h only for human
 (`pyuniprot.update(` ; depending on your system)
 
-It is strobgly recommended to restrict the entries in the database by parsing a list of NCBI Taxonomy IDs to the
+It is strongly recommended to restrict the entries in the database by parsing a list of NCBI Taxonomy IDs to the
 parameter taxids. To find out the correct NCBI Taxonomy ID please go to
 `NCBI Taxonomy web form <https://www.ncbi.nlm.nih.gov/taxonomy/>`_. In the following example we use 9606 as identifier
 for Homo sapiens, 10090 for Mus musculus and 10116 for Rattus norvegicus.
@@ -130,27 +130,60 @@ If you want to load all UniProt entries in the database:
     import pyuniprot
     pyuniprot.update()
 
-Test a query function
-~~~~~~~~~~~~~~~~~~~~~
+Quick start with query functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Initialize the query object
+
 .. code-block:: python
 
-    >>> query = pyuniprot.query()
-    >>> results =query.get_chem_gene_interaction_actions(gene_name='APP', interaction_action='meman%', limit=1)
-    >>> first_result = r
-    >>> r.chemical
-    Memantine
-    >>> r.pubmed_ids
-    [21290839]
-    >>> r.chemical.drugbank_ids
-    [DB014043]
+    query = pyuniprot.query()
+
+Get all entries
+
+.. code-block:: python
+
+    all_entries = query.entry()
+
+
+Use parameters like gene_name to find specific entries
+
+.. code-block:: python
+
+    >>> entry = query.get_entry(gene_name='YWHAE', taxid=9606, recommended_short_name='14-3-3E', name='1433E_HUMAN')[0]
+    >>> entry
+    14-3-3 protein epsilon
+
+Entry is the root element in the database. Form here you can reach all other data
+    >>> entry.accessions
+    [P62258, B3KY71, D3DTH5, P29360, P42655, Q4VJB6, Q53XZ5, Q63631, Q7M4R4]
+    >>> entry.functions
+    ["Adapter protein implicated in the regulation of a large spectrum of both ..."]
+
+If a parameter ends on a **s** you can search
+    >>> alcohol_dehydrogenases = q.get_entry(ec_numbers='1.1.1.1')
+    >>> [x.name for x in q.get_entry(ec_numbers='1.1.1.1')]
+    ['ADHX_RAT', 'ADH1_RAT', 'ADHX_HUMAN', 'ADHX_MOUSE']
+    >>> query.get_entry(ec_numbers=('1.1.1.1', '1.1.1.2'))
+    ['Adh5', 'Adh1', 'ADH5', 'Adh5', 'Adh6', 'ADH7', 'Adh7', 'Adh7', 'Adh1']
+
+As dataframe with a limit of 10 and accession number starts with Q9 (% used as wildcard)
+
+.. code-block:: python
+
+    >>> query.get_accession(as_df=True, limit=3, accession='Q9%')
+       id accession  entry_id
+    0   1    Q9CQV8         1
+    1  32    Q9GIK8         6
+    2  33    Q9TQB4         6
+
 
 
 More information
 ----------------
-See the `installation documentation <http://pyUniProt.readthedocs.io/en/latest/installation.html>`_ for more advanced
+See the `installation documentation <http://pyuniprot.readthedocs.io/en/latest/installation.html>`_ for more advanced
 instructions. Also, check the change log at :code:`CHANGELOG.rst`.
 
-CTD tools and licence (use of data)
+UniProt tools and licence (use of data)
 -----------------------------------
 CTD provides also many online `query interfaces <http://ctdbase.org/search/>`_ and
 `tools to analyse data <http://ctdbase.org/tools/>`_ on their website.
