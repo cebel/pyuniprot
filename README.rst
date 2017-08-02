@@ -50,19 +50,19 @@ PyUniProt can be installed with `pip <https://pip.pypa.io/en/stable/>`_.
 
 .. code-block:: bash
 
-    pip install pyUniProt
+    pip install pyuniprot
 
 If you fail because you have no rights to install use superuser (sudo on Linux before the commend) or ...
 
 .. code-block:: bash
 
-    pip install --user pyUniProt
+    pip install --user pyuniprot
 
 If you want to make sure you are installing this under python3 use ...
 
 .. code-block:: bash
 
-    python3 -m pip install pyUniProt
+    python3 -m pip install pyuniprot
 
 SQLite
 ~~~~~~
@@ -86,8 +86,8 @@ Log in MySQL as root user and create a new database, create a user, assign the r
 
 .. code-block:: mysql
 
-    CREATE DATABASE pyUniProt CHARACTER SET utf8 COLLATE utf8_general_ci;
-    GRANT ALL PRIVILEGES ON pyUniProt.* TO 'pyUniProt_user'@'%' IDENTIFIED BY 'pyUniProt_passwd';
+    CREATE DATABASE pyuniprot CHARACTER SET utf8 COLLATE utf8_general_ci;
+    GRANT ALL PRIVILEGES ON pyuniprot.* TO 'pyuniprot_user'@'%' IDENTIFIED BY 'pyuniprot_passwd';
     FLUSH PRIVILEGES;
 
 Start a python shell and set the MySQL configuration. If you have not changed anything in the SQL statements ...
@@ -103,25 +103,38 @@ If you have used you own settings, please adapt the following command to you req
 
     import pyuniprot
     pyuniprot.set_mysql_connection()
-    pyuniprot.set_mysql_connection(host='localhost', user='pyUniProt_user', passwd='pyUniProt_passwd', db='pyUniProt')
+    pyuniprot.set_mysql_connection(host='localhost', user='pyuniprot_user', passwd='pyuniprot_passwd', db='pyuniprot')
 
 Updating
 ~~~~~~~~
-The updating process will download the files provided by the CTD team on the
-`download page <http://ctdbase.org/downloads/>`_
+The updating process will download the *uniprot_sprot.xml.gz* provided by the UniProt team on ftp server
+`download page <ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/>`_
 
-.. warning:: Please note that download files needs 1,5Gb of disk space and the update takes ~2h (depending on your system)
+.. warning:: Please note that files needs more than 6 Gb of disk space and the update takes ~2h only for human
+(`pyuniprot.update(` ; depending on your system)
+
+It is strobgly recommended to restrict the entries in the database by parsing a list of NCBI Taxonomy IDs to the
+parameter taxids. To find out the correct NCBI Taxonomy ID please go to
+`NCBI Taxonomy web form <https://www.ncbi.nlm.nih.gov/taxonomy/>`_. In the following example we use 9606 as identifier
+for Homo sapiens, 10090 for Mus musculus and 10116 for Rattus norvegicus.
 
 .. code-block:: python
 
-    import pyUniProt
-    pyUniProt.update()
+    import pyuniprot
+    pyuniprot.update(taxids=[9606, 10090, 10116])
+
+If you want to load all UniProt entries in the database:
+
+.. code-block:: python
+
+    import pyuniprot
+    pyuniprot.update()
 
 Test a query function
 ~~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
-    >>> query = pyUniProt.query()
+    >>> query = pyuniprot.query()
     >>> results =query.get_chem_gene_interaction_actions(gene_name='APP', interaction_action='meman%', limit=1)
     >>> first_result = r
     >>> r.chemical
@@ -151,26 +164,25 @@ MDI Biological Laboratory and NC State University.
 
 Links
 -----
-Comparative Toxicogenomics Database (CTD)
+Universal Protein Resource (UniProt)
 
-- `CTD website <http://ctdbase.org/>`_
-- `All CTD publications <http://ctdbase.org/about/publications/>`_
-- `CTD download page <http://ctdbase.org/downloads/>`_
+- `UniProt website <http://www.uniprot.org/>`_
+- `About UniProt <http://www.uniprot.org/help/about>`_
 
 PyUniProt
 
-- Documented on `Read the Docs <http://pyUniProt.readthedocs.io/>`_
-- Versioned on `GitHub <https://github.com/cebel/pyUniProt>`_
-- Tested on `Travis CI <https://travis-ci.org/cebel/pyUniProt>`_
-- Distributed by `PyPI <https://pypi.python.org/pypi/pyUniProt>`_
-- Chat on `Gitter <https://gitter.im/pyUniProt/Lobby>`_
+- Documented on `Read the Docs <http://pyuniprot.readthedocs.io/>`_
+- Versioned on `GitHub <https://github.com/cebel/pyuniprot>`_
+- Tested on `Travis CI <https://travis-ci.org/cebel/pyuniprot>`_
+- Distributed by `PyPI <https://pypi.python.org/pypi/pyuniprot>`_
+- Chat on `Gitter <https://gitter.im/pyuniprot/Lobby>`_
 
 .. |stable_build| image:: https://travis-ci.org/cebel/pyUniProt.svg?branch=master
-    :target: https://travis-ci.org/cebel/pyUniProt
+    :target: https://travis-ci.org/cebel/pyuniprot
     :alt: Stable Build Status
 
 .. |stable_documentation| image:: https://readthedocs.org/projects/pyUniProt/badge/?version=latest
-    :target: http://pyUniProt.readthedocs.io/en/latest/
+    :target: http://pyuniprot.readthedocs.io/en/latest/
     :alt: Development Documentation Status
 
 .. |pypi_license| image:: https://img.shields.io/pypi/l/PyUniProt.svg
