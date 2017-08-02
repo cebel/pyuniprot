@@ -6,9 +6,11 @@ import sys
 import gzip
 import configparser
 import time
+import shutil
 
 import numpy as np
 
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 from lxml import etree
@@ -77,8 +79,8 @@ def gunzip_file(path):
     extracted_path = Path(path[:-3])
 
     if not extracted_path.exists() and gzipped_path.is_file() and gzipped_path.suffix == '.gz':
-        with gzip.open(str(gzipped_path), 'rb') as gzipped_file, extracted_path.open('wb') as extracted_file:
-            extracted_file.write(gzipped_file.read())
+        with gzip.open(path, 'rb') as f_in, open(path[:-3], 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
 
     if extracted_path.is_file():
         return extracted_path
@@ -107,7 +109,12 @@ class BaseDbManager(object):
             self.connection = get_connection_string(connection)
             self.engine = create_engine(self.connection, echo=echo)
             self.inspector = reflection.Inspector.from_engine(self.engine)
-            self.sessionmaker = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
+            self.sessionmaker = sessionmaker(
+                bind=self.engine,
+                autoflush=False,
+                autocommit=False,
+                expire_on_commit=False
+            )
             self.session = scoped_session(self.sessionmaker)()
         except:
             self.set_connection_string_by_user_input()
@@ -228,18 +235,38 @@ class DbManager(BaseDbManager):
                     if number_of_entries == interval or end_of_file:
                         entry_xml += ["</entries>"]
                         self.insert_entries(entry_xml, taxids)
-                        self.session.commit()
                         if end_of_file:
                             break
                         else:
                             entry_xml = ["<entries>"]
                             number_of_entries = 0
 
+    def import_xml_old(self, xml_file_path, taxids):
+        with open(xml_file_path) as f:
+            xml = BytesIO(f.read().encode('utf-8'))
+
+        entry_counter = 0
+        for action, element in etree.iterparse(xml, tag='{http://uniprot.org/uniprot}entry', huge_tree=True):
+            entry_counter += self.insert_entry(element, taxids)
+            element.clear()
+            del element
+
+            if entry_counter % 100 == 0 and entry_counter != 0:
+                self.session.commit()
+        self.session.commit()
+
     def insert_entries(self, entries_xml, taxids):
         """insert UniProt entries from XML"""
         entries = etree.fromstringlist(entries_xml)
+
         for entry in entries:
             self.insert_entry(entry, taxids)
+            entry.clear()
+            del entry
+
+        del entries
+
+        self.session.commit()
 
     def insert_entry(self, entry, taxids):
         """insert UniProt entry"""
@@ -283,13 +310,14 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_sequence(cls, entry):
-        seq_tag = entry.find("./sequence")
+        query = "./sequence"
+        seq_tag = entry.find(query)
         return models.Sequence(sequence=seq_tag.text)
 
     def get_tissue_in_references(self, entry):
         tissue_in_references = []
-
-        tissues = {x.text for x in entry.findall("./reference/source/tissue")}
+        query = "./reference/source/tissue"
+        tissues = {x.text for x in entry.findall(query)}
 
         for tissue in tissues:
 
@@ -312,8 +340,8 @@ class DbManager(BaseDbManager):
 
     def get_subcellular_locations(self, entry):
         subcellular_locations = []
-
-        sls = {x.text for x in entry.findall('./comment/subcellularLocation/location')}
+        query = './comment/subcellularLocation/location'
+        sls = {x.text for x in entry.findall(query)}
 
         for sl in sls:
 
@@ -347,7 +375,7 @@ class DbManager(BaseDbManager):
         query = "./comment[@type='disease']"
 
         for disease_comment in entry.findall(query):
-            value_dict = {'comment':disease_comment.find('text').text}
+            value_dict = {'comment': disease_comment.find('./text').text}
 
             disease = disease_comment.find("./disease")
 
@@ -386,14 +414,14 @@ class DbManager(BaseDbManager):
     @classmethod
     def get_ec_numbers(cls, entry):
         ec_numbers = []
-        query = "./protein/recommendedName/ecNumber"
-        for ec in entry.findall(query):
+
+        for ec in entry.findall("./protein/recommendedName/ecNumber"):
             ec_numbers.append(models.ECNumber(ec_number=ec.text))
         return ec_numbers
 
     @classmethod
     def get_gene_name(cls, entry):
-        gene_name = entry.find("gene/name[@type='primary']")
+        gene_name = entry.find("./gene/name[@type='primary']")
         return gene_name.text if isinstance(gene_name, etree._Element) else None
 
     @classmethod
@@ -403,16 +431,22 @@ class DbManager(BaseDbManager):
     @classmethod
     def get_db_references(cls, entry):
         db_refs = []
-        query = "./dbReference"
-        for db_ref in entry.findall(query):
+
+        for db_ref in entry.findall("./dbReference"):
             attrib_dict = dict(db_ref.attrib)
-            db_ref_dict = {'identifier':attrib_dict['id'], 'type': attrib_dict['type']}
+            db_ref_dict = {'identifier': attrib_dict['id'], 'type': attrib_dict['type']}
             db_refs.append(models.DbReference(**db_ref_dict))
+
         return db_refs
+
+    @classmethod
+    def get_query_string(cls, query):
+        return '/{http://uniprot.org/uniprot}'.join(query.split('/'))
 
     @classmethod
     def get_features(cls, entry):
         features = []
+
         for feature in entry.findall("./feature"):
             attrib_dict = dict(feature.attrib)
             feature_dict = {
@@ -449,7 +483,8 @@ class DbManager(BaseDbManager):
 
     def get_pmids(self, entry):
         pmids = []
-        pmids_found = entry.findall("./reference/citation/dbReference[@type='PubMed']")
+        query = "./reference/citation/dbReference[@type='PubMed']"
+        pmids_found = entry.findall(query)
         for pmid in pmids_found:
             pmid_number = pmid.get('id')
             if pmid_number not in self.pmids:
@@ -466,7 +501,8 @@ class DbManager(BaseDbManager):
     @classmethod
     def get_functions(cls, entry):
         comments = []
-        for comment in entry.findall("./comment[@type='function']"):
+        query = "./comment[@type='function']"
+        for comment in entry.findall(query):
             text = comment.find('./text').text
             comments.append(models.Function(text=text))
         return comments
