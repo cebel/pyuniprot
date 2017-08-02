@@ -77,11 +77,8 @@ def gunzip_file(path):
     extracted_path = Path(path[:-3])
 
     if not extracted_path.exists() and gzipped_path.is_file() and gzipped_path.suffix == '.gz':
-        gzipped_file = gzip.open(str(gzipped_path), 'rb')
-        extracted_file = extracted_path.open('wb')
-        extracted_file.write(gzipped_file.read())
-        gzipped_file.close()
-        extracted_file.close()
+        with gzip.open(str(gzipped_path), 'rb') as gzipped_file, extracted_path.open('wb') as extracted_file:
+            extracted_file.write(gzipped_file.read())
 
     if extracted_path.is_file():
         return extracted_path
