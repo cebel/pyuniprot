@@ -28,7 +28,8 @@ class QueryManager(BaseDbManager):
 
         return results
 
-    def _many_to_many_query(self, query_obj, search4, model_attrib, many2many_attrib):
+    @classmethod
+    def _many_to_many_query(cls, query_obj, search4, model_attrib, many2many_attrib):
         model = model_attrib.parent.class_
 
         if isinstance(search4, str):
@@ -40,7 +41,8 @@ class QueryManager(BaseDbManager):
 
         return query_obj
 
-    def _one_to_many_query(self, query_obj, search4, model_attrib):
+    @classmethod
+    def _one_to_many_query(cls, query_obj, search4, model_attrib):
         model = model_attrib.parent.class_
 
         if isinstance(search4, str):
@@ -48,7 +50,7 @@ class QueryManager(BaseDbManager):
         elif isinstance(search4, int):
             query_obj = query_obj.join(model).filter(model_attrib == search4)
         elif isinstance(search4, Iterable):
-            query_obj = query_obj.join(models).filter(model_attrib.in_(search4))
+            query_obj = query_obj.join(model).filter(model_attrib.in_(search4))
         return query_obj
 
     def get_obo_string(self, taxid=None, limit=None):
@@ -76,7 +78,6 @@ class QueryManager(BaseDbManager):
                     xref.identifier = ':'.join(xref.identifier.split(':')[1:])
                     obo_string += 'xref: {}:{}\n'.format(xref.type, xref.identifier.replace('\\', '\\\\'))
         return obo_string
-
 
     def get_entry(self,
                   id=None,
