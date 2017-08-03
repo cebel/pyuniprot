@@ -6,13 +6,12 @@ import sys
 import gzip
 import configparser
 import time
-import shutil
+import importlib
 
 import numpy as np
 
 from io import BytesIO
 from datetime import datetime
-from pathlib import Path
 from lxml import etree
 from configparser import RawConfigParser
 from sqlalchemy import create_engine, inspect
@@ -65,27 +64,6 @@ def get_connection_string(connection=None):
                 log.info('create configuration file %s', cfp)
 
     return connection
-
-
-def gunzip_file(path):
-    """gunzip path and returns path to extracted file
-
-    :param str path: path to gzip file
-    :return: path to extracted file
-    :rtype: pathlib.Path
-    """
-
-    gzipped_path = Path(path)
-    extracted_path = Path(path[:-3])
-
-    if not extracted_path.exists() and gzipped_path.is_file() and gzipped_path.suffix == '.gz':
-        with gzip.open(path, 'rb') as f_in, open(path[:-3], 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-
-    if extracted_path.is_file():
-        return extracted_path
-    else:
-        return None
 
 
 class BaseDbManager(object):
@@ -214,21 +192,19 @@ class DbManager(BaseDbManager):
         """Imports XML"""
         entry_xml = ['<entries>']
         number_of_entries = 0
-        interval = 100
+        interval = 1000
         start = False
 
-        xml_file = gunzip_file(xml_gzipped_file_path)
-
-        with xml_file.open('r') as fd:
+        with gzip.open(xml_gzipped_file_path) as fd:
             for line in fd:
-                end_of_file = line.startswith("</uniprot>")
-                if line.startswith("<entry "):
+                end_of_file = line.startswith(b"</uniprot>")
+                if line.startswith(b"<entry "):
                     start = True
                 elif end_of_file:
                     start = False
                 if start:
-                    entry_xml += [line]
-                if line.startswith("</entry>") or end_of_file:
+                    entry_xml += [line.decode("utf-8")]
+                if line.startswith(b"</entry>") or end_of_file:
                     number_of_entries += 1
                     start = False
 
@@ -257,13 +233,20 @@ class DbManager(BaseDbManager):
 
     def insert_entries(self, entries_xml, taxids):
         """insert UniProt entries from XML"""
-        entries = etree.fromstringlist(entries_xml)
+
+        # to avoid memory leak reload of etree is necessary
+        if 'etree' in sys.modules:
+            importlib.reload(etree)
+
+        parser = etree.XMLParser(collect_ids=False)
+        entries = etree.fromstringlist(entries_xml, parser)
 
         for entry in entries:
             self.insert_entry(entry, taxids)
             entry.clear()
             del entry
 
+        etree.clear_error_log()
         del entries
 
         self.session.commit()
