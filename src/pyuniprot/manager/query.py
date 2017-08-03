@@ -53,6 +53,17 @@ class QueryManager(BaseDbManager):
             query_obj = query_obj.join(model).filter(model_attrib.in_(search4))
         return query_obj
 
+    @classmethod
+    def _model_query(cls, query_obj, search4, model_attrib):
+
+        if isinstance(search4, str):
+            query_obj = query_obj.filter(model_attrib.like(search4))
+        elif isinstance(search4, int):
+            query_obj = query_obj.filter(model_attrib == search4)
+        elif isinstance(search4, Iterable):
+            query_obj = query_obj.filter(model_attrib.in_(search4))
+        return query_obj
+
     def get_obo_string(self, taxid=None, limit=None):
 
         q = self.session.query(models.Entry)
@@ -78,6 +89,21 @@ class QueryManager(BaseDbManager):
                     xref.identifier = ':'.join(xref.identifier.split(':')[1:])
                     obo_string += 'xref: {}:{}\n'.format(xref.type, xref.identifier.replace('\\', '\\\\'))
         return obo_string
+
+    def get_model_queries(self, query_obj, model_queries_config):
+        for search4, model_attrib in model_queries_config:
+            query_obj = self._model_query(query_obj, search4, model_attrib)
+        return query_obj
+
+    def get_one_to_many_queries(self, query_obj, one_to_many_queries):
+        for search4, model_attrib in one_to_many_queries:
+            query_obj = self._one_to_many_query(query_obj, search4, model_attrib)
+        return query_obj
+
+    def get_many_to_many_queries(self, query_obj, many_to_many_queries_config):
+        for search4, model_attrib, many2many_attrib in many_to_many_queries_config:
+            query_obj = self._many_to_many_query(query_obj, search4, model_attrib, many2many_attrib)
+        return query_obj
 
     def get_entry(self,
                   id=None,
@@ -136,25 +162,16 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Entry)
 
-        if id:
-            q = q.filter(models.Entry.id == id)
+        model_queries_config = (
+            (id, models.Entry.id),
+            (name, models.Entry.name),
+            (recommended_full_name, models.Entry.recommended_full_name),
+            (gene_name, models.Entry.gene_name),
+            (taxid, models.Entry.taxid)
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
-        if name:
-            q = q.filter(models.Entry.name.like(name))
-
-        if recommended_full_name:
-            q = q.filter(models.Entry.recommended_full_name.like(recommended_full_name))
-
-        if recommended_short_name:
-            q = q.filter(models.Entry.recommended_short_name.like(recommended_short_name))
-
-        if gene_name:
-            q = q.filter(models.Entry.gene_name.like(gene_name))
-
-        if taxid:
-            q = q.filter(models.Entry.taxid == taxid)
-
-        one_to_many_queries = (
+        one_to_many_queries_config = (
             (accessions, models.Accession.accession),
             (organism_hosts, models.OrganismHost.taxid),
             (feature_types, models.Feature.type),
@@ -165,19 +182,15 @@ class QueryManager(BaseDbManager):
             (disease_comments, models.DiseaseComment.comment),
             (tissue_specificities, models.TissueSpecificity.comment),
         )
+        self.get_one_to_many_queries(q, one_to_many_queries_config)
 
-        for search4, model_attrib in one_to_many_queries:
-            q = self._one_to_many_query(q, search4, model_attrib)
-
-        many_to_many_queries = (
+        many_to_many_queries_config = (
             (pmids, models.Entry.pmids, models.Pmid.pmid),
             (keywords, models.Entry.keywords, models.Keyword.identifier),
             (subcellular_locations, models.Entry.subcellular_locations, models.SubcellularLocation.location),
             (tissue_in_reference, models.Entry.tissue_in_references, models.TissueInReference.tissue)
         )
-
-        for search4, model_attrib, many2many_attrib in many_to_many_queries:
-            q = self._many_to_many_query(q, search4, model_attrib, many2many_attrib)
+        self.get_many_to_many_queries(q, many_to_many_queries_config)
 
         if disease_names:
             q = q.join(models.Entry.disease_comments).join(models.DiseaseComment.disease)
@@ -199,7 +212,7 @@ class QueryManager(BaseDbManager):
                     as_df=False
                     ):
         """
-
+        :param id:
         :param identifier:
         :param ref_id:
         :param ref_type:
@@ -212,23 +225,15 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Disease)
 
-        if identifier:
-            q = q.filter(models.Disease.identifier.like(identifier))
-
-        if ref_id:
-            q = q.filter(models.Disease.ref_id.like(ref_id))
-
-        if ref_type:
-            q = q.filter(models.Disease.ref_type.like(ref_type))
-
-        if name:
-            q = q.filter(models.Disease.name.like(name))
-
-        if acronym:
-            q = q.filter(models.Disease.acronym.like(acronym))
-
-        if description:
-            q = q.filter(models.Disease.description.like(description))
+        model_queries_config = (
+            (identifier, models.Disease.identifier),
+            (ref_id, models.Disease.ref_id),
+            (ref_type, models.Disease.ref_type),
+            (name, models.Disease.name),
+            (acronym, models.Disease.acronym),
+            (description, models.Disease.description)
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -242,8 +247,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.DiseaseComment)
 
-        if comment:
-            q = q.filter(models.DiseaseComment.comment.like(comment))
+        model_queries_config = (
+            (comment, models.DiseaseComment.comment),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -257,8 +264,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.AlternativeFullName)
 
-        if name:
-            q = q.filter(models.AlternativeFullName.name.like(name))
+        model_queries_config = (
+            (name, models.AlternativeFullName.name),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -272,8 +281,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.AlternativeShortName)
 
-        if name:
-            q = q.filter(models.AlternativeShortName.name.like(name))
+        model_queries_config = (
+            (name, models.AlternativeShortName.name),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -287,8 +298,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Accession)
 
-        if accession:
-            q = q.filter(models.Accession.accession.like(accession))
+        model_queries_config = (
+            (accession, models.Accession.accession),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -320,29 +333,17 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Pmid)
 
-        if pmid:
-            q = q.filter(models.Pmid.pmid == pmid)
-
-        if last:
-            q = q.filter(models.Pmid.last.like(last))
-
-        if first:
-            q = q.filter(models.Pmid.first.like(first))
-
-        if volume:
-            q = q.filter(models.Pmid.volume.like(volume))
-
-        if name:
-            q = q.filter(models.Pmid.name.like(name))
-
-        if date:
-            q = q.filter(models.Pmid.date.like(date))
-
-        if type_:
-            q = q.filter(models.Pmid.type_.like(type_))
-
-        if title:
-            q = q.filter(models.Pmid.title.like(title))
+        model_queries_config = (
+            (pmid, models.Pmid.pmid),
+            (last, models.Pmid.last),
+            (first, models.Pmid.first),
+            (volume, models.Pmid.volume),
+            (name, models.Pmid.name),
+            (date, models.Pmid.date),
+            (type_, models.Pmid.type_),
+            (title, models.Pmid.title)
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -370,11 +371,11 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.DbReference)
 
-        if type_:
-            q = q.filter(models.DbReference.type.like(type_))
-
-        if identifier:
-            q = q.filter(models.DbReference.identifier.like(identifier))
+        model_queries_config = (
+            (type_, models.DbReference.type),
+            (identifier, models.DbReference.identifier)
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -390,14 +391,12 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Feature)
 
-        if type_:
-            q = q.filter(models.Feature.type.like(type_))
-
-        if identifier:
-            q = q.filter(models.Feature.identifier.like(identifier))
-
-        if description:
-            q = q.filter(models.Feature.description.like(description))
+        model_queries_config = (
+            (type_, models.Feature.type),
+            (identifier, models.Feature.identifier),
+            (description, models.Feature.description)
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -411,8 +410,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Function)
 
-        if text:
-            q = q.filter(models.Function.text.like(text))
+        model_queries_config = (
+            (text, models.Function.text),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -427,11 +428,11 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.Keyword)
 
-        if name:
-            q = q.filter(models.Keyword.name.like(name))
-
-        if identifier:
-            q = q.filter(models.Keyword.identifier.like(identifier))
+        model_queries_config = (
+            (name, models.Keyword.name),
+            (identifier, models.Keyword.identifier)
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -445,8 +446,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.ECNumber)
 
-        if ec_number:
-            q = q.filter(models.ECNumber.ec_number.like(ec_number))
+        model_queries_config = (
+            (ec_number, models.ECNumber.ec_number),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -460,8 +463,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.SubcellularLocation)
 
-        if location:
-            q = q.filter(models.SubcellularLocation.location.like(location))
+        model_queries_config = (
+            (location, models.SubcellularLocation.location),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -475,8 +480,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.TissueSpecificity)
 
-        if comment:
-            q = q.filter(models.TissueSpecificity.comment.like(comment))
+        model_queries_config = (
+            (comment, models.TissueSpecificity.comment),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
@@ -490,8 +497,10 @@ class QueryManager(BaseDbManager):
         """
         q = self.session.query(models.TissueInReference)
 
-        if tissue:
-            q = q.filter(models.TissueInReference.tissue.like(tissue))
+        model_queries_config = (
+            (tissue, models.TissueInReference.tissue),
+        )
+        q = self.get_model_queries(q, model_queries_config)
 
         return self._limit_and_df(q, limit, as_df)
 
