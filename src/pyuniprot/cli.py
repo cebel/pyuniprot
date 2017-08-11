@@ -1,5 +1,5 @@
 import click
-from .manager.database import update
+from .manager import database
 from .webserver.web import get_app
 
 @click.group()
@@ -9,11 +9,10 @@ def main():
 @main.command()
 def update():
     """Update PyUniProt data"""
-    update()
+    database.update()
 
 @main.command()
 def web():
     get_app().run()
-
 
 
