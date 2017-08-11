@@ -9,7 +9,7 @@ def main():
 @main.command()
 def update():
     """Update PyUniProt data"""
-    pyuniprot.update()
+    update()
 
 @main.command()
 def web():
