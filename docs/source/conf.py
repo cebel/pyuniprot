@@ -163,11 +163,14 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'https://docs.python.org/': None,
+    'pandas': ('http://pandas.pydata.org/pandas-docs/dev', None)
+}
 
 # Added by Christian Ebeling
 # tags is not recognized, but this is no problem
 if os.environ.get('READTHEDOCS', None):
     tags.add('readthedocs')
 
-autoclass_content = "both"
+# autoclass_content = "both"

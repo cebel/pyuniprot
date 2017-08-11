@@ -183,7 +183,7 @@ class DbManager(BaseDbManager):
         log.info('Update CTD database from {}'.format(url))
 
         self._drop_tables()
-        xml_gzipped_file_path = DbManager.download(url, force_download)
+        xml_gzipped_file_path = self.download(url, force_download)
         self._create_tables()
         self.import_xml(xml_gzipped_file_path, taxids)
         self.session.close()
@@ -279,6 +279,7 @@ class DbManager(BaseDbManager):
             recommended_short_name=rp_short,
             taxid=taxid,
             db_references=self.get_db_references(entry),
+            other_gene_names=self.get_other_gene_names(entry),
             features=self.get_features(entry),
             functions=self.get_functions(entry),
             gene_name=self.get_gene_name(entry),
@@ -408,6 +409,18 @@ class DbManager(BaseDbManager):
         return gene_name.text if isinstance(gene_name, etree._Element) else None
 
     @classmethod
+    def get_other_gene_names(cls, entry):
+        alternative_gene_names = []
+
+        for alternative_gene_name in entry.findall("./gene/name"):
+            attrib_dict = dict(alternative_gene_name.attrib)
+            if attrib_dict['type'] != 'primary':
+                alternative_gene_name_dict = {'type_': attrib_dict['type'], 'name': alternative_gene_name.text}
+                alternative_gene_names.append(models.OtherGeneName(**alternative_gene_name_dict))
+
+        return alternative_gene_names
+
+    @classmethod
     def get_accessions(cls, entry):
         return [models.Accession(accession=x.text) for x in entry.findall("./accession")]
 
@@ -417,7 +430,7 @@ class DbManager(BaseDbManager):
 
         for db_ref in entry.findall("./dbReference"):
             attrib_dict = dict(db_ref.attrib)
-            db_ref_dict = {'identifier': attrib_dict['id'], 'type': attrib_dict['type']}
+            db_ref_dict = {'identifier': attrib_dict['id'], 'type_': attrib_dict['type']}
             db_refs.append(models.DbReference(**db_ref_dict))
 
         return db_refs
@@ -434,7 +447,7 @@ class DbManager(BaseDbManager):
             attrib_dict = dict(feature.attrib)
             feature_dict = {
                 'description': attrib_dict.get('description'),
-                'type': attrib_dict['type']
+                'type_': attrib_dict['type']
             }
             if 'id' in attrib_dict:
                 feature_dict['identifier'] = attrib_dict.pop('id')
@@ -473,6 +486,7 @@ class DbManager(BaseDbManager):
             if pmid_number not in self.pmids:
                 citation = pmid.getparent()
                 pmid_dict = dict(citation.attrib)
+                del pmid_dict['type'] # not needed because already filtered for PubMed
                 pmid_dict.update(pmid=pmid_number)
                 title_tag = citation.find('./title')
                 if title_tag is not None:
@@ -577,10 +591,10 @@ def update(connection=None, urls=None, force_download=False, taxids=None):
     :type connection: str
     :param force_download: force method to download
     :type force_download: bool
-    :param taxids: iterable of NCBI taxonomy identifiers (default is None = load all)
-    :type taxids: iterable of integers
+    :param int,list,tuple taxids: int or iterable of NCBI taxonomy identifiers (default is None = load all)
     """
-
+    if isinstance(taxids, int):
+        taxids = (taxids,)
     db = DbManager(connection)
     db.db_import_xml(urls, force_download, taxids)
     db.session.close()

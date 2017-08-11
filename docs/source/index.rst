@@ -51,6 +51,8 @@ a scientific cooperation with us.
    installation
    quick_start
    tutorial
+   query_functions
+   restful_api
    uniprot
    benchmarks
 
@@ -59,7 +61,7 @@ a scientific cooperation with us.
    :name: reference
 
    query
-   manager
+   models
 
 .. toctree::
    :numbered:
@@ -68,7 +70,6 @@ a scientific cooperation with us.
 
    roadmap
    technology
-
 
 Acknowledgment and contribution to scientific projects
 ------------------------------------------------------

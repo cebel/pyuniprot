@@ -1,0 +1,31 @@
+sudo: false
+cache: pip
+language: python
+python:
+- 3.6
+- 2.7
+env:
+  matrix:
+  - TOXENV=py
+  - TOXENV=docs
+matrix:
+  include:
+  - python: 3.6
+    env: TOXENV=manifest
+  allow_failures:
+  - python: 2.7
+install:
+- pip install tox
+- pip install codecov
+script:
+- tox
+deploy:
+  provider: pypi
+  user: Christian_Ebeling
+  password:
+    secure: dNox7u2X5cdgXhS5PYvuG4D7yO0cgY+9xXBMd3UHMOuNteSi8HF21z8wQwbZHR7BVmKGNlORRf6wBFf1/WLyQOnWKViDWtxwhFoU7EnAVB200VgZiChArML+T3UBEnO31aqWTa+RVeSNOEMIbbG5f+hSmQeE/kAl19YR0VLVaDObljQ14b88i/y1VEslfB5GP3z53aMOfKsrFBFir+ClPDU+6UUE0/eWc20vop2kHsr4tsXh/sfq7/NyC5MH2mCV895d+wwdvj3h7wOKO6cGb1gm2mFsgUZpxxwQBmZsii7n/FKN44feAhpra7XECUrkl5j2D8U0IK7t+ajvc2Sl+nYlsD2Aoan+egGwShG9fsVOu5n7t/vowKPA6eSNpNZPcayfqXRbOfHl0anbnWBviAQ6AAG57Bf3eGX+Vp5tMl23kAIlwelDwvgyWjrbPAqC9trmXLbJWKiTe+HwuzfHRB9gR6QMtkNowS1xnXreQ/AwSosZ/2wYwiYqtKh+hnio94CPpTCw5tKGVElYMwEi+k316+JbYv9sSOC1fO1JUK/Blh/ja/HBe3gKD5J/FOZRpiKeK/mXMjc3pgO/QD+MjqZTHdxs8D+YwJZmOMYdgAcr9aEAwdiqP8Q67lTt+Xg21ne4WoYmdCwMq3H9ekdWwG+YCA6ia418q68MU9dIxgU=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: cebel/pyuniprot
+    branch: master

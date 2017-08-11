@@ -3,6 +3,7 @@
 {% block body %}
 <div class="jumbotron text-center">
     <h1>Welcome to PyUniProt WEB</h1>
+    <img src="static/logo_pyUniProt_large.png">
     <p class="lead">Python software library to access comprehensive, high-quality and freely accessible resource of
         protein sequence and functional information</p>
 
@@ -10,8 +11,9 @@
         <a href="/register" class="btn btn-primary btn-lg">Register</a>
         <a href="/login" class="btn btn-success btn-lg">Login</a>
     {% endif %}
-    {% raw %}
-        {{ test.id }}
-    {% endraw %}
 </div>
 {% endblock %}
+
+{% raw %}
+    {{ test.id }}
+{% endraw %}

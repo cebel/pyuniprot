@@ -69,7 +69,7 @@ SQLite
 .. note:: If you want to use SQLite as your database system, because you ...
 
     - have no possibility to use RDMSs like MySQL/MariaDB
-    - just test pyUniProt, but don't want to spend time in setting up a database
+    - just test PyUniProt, but don't want to spend time in setting up a database
 
     skip the next *MySQL/MariaDB setup* section. But in general we recommend MySQL or MariaDB as your RDBMS.
 
@@ -107,14 +107,14 @@ If you have used you own settings, please adapt the following command to you req
 
 Updating
 ~~~~~~~~
-The updating process will download the *uniprot_sprot.xml.gz* provided by the UniProt team on ftp server
+The updating process will download the *uniprot_sprot.xml.gz* file provided by the UniProt team on their ftp server
 `download page <ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/>`_
 
-.. warning:: Please note that files needs more than 6 Gb of disk space and the update takes ~2h only for human
-(`pyuniprot.update(` ; depending on your system)
+.. warning:: Please note that UniProt download file needs ~700 Mb of disk space and the update takes ~2h only for
+human, mouse and rat (depending on your system)
 
-It is strongly recommended to restrict the entries in the database by parsing a list of NCBI Taxonomy IDs to the
-parameter taxids. To find out the correct NCBI Taxonomy ID please go to
+It is strongly recommended to restrict the entries liked to specific organisms your are interested in by parsing a list
+of NCBI Taxonomy IDs to the parameter `taxids`. To identify correct NCBI Taxonomy IDs please go to
 `NCBI Taxonomy web form <https://www.ncbi.nlm.nih.gov/taxonomy/>`_. In the following example we use 9606 as identifier
 for Homo sapiens, 10090 for Mus musculus and 10116 for Rattus norvegicus.
 
@@ -129,6 +129,14 @@ If you want to load all UniProt entries in the database:
 
     import pyuniprot
     pyuniprot.update()
+
+The update uses the download if it still exists on you system (~/.pyuniprot/data/uniprot_sprot.xml.gz). If you use
+the parameter `force_download` the current file from UniProt will be downloaded.
+
+.. code-block:: python
+
+    import pyuniprot
+    pyuniprot.update(force_download=True)
 
 Quick start with query functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -149,7 +157,7 @@ Use parameters like gene_name to find specific entries
 
 .. code-block:: python
 
-    >>> entry = query.get_entry(gene_name='YWHAE', taxid=9606, recommended_short_name='14-3-3E', name='1433E_HUMAN')[0]
+    >>> entry = query.entry(gene_name='YWHAE', taxid=9606, recommended_short_name='14-3-3E', name='1433E_HUMAN')[0]
     >>> entry
     14-3-3 protein epsilon
 
@@ -160,17 +168,17 @@ Entry is the root element in the database. Form here you can reach all other dat
     ["Adapter protein implicated in the regulation of a large spectrum of both ..."]
 
 If a parameter ends on a **s** you can search
-    >>> alcohol_dehydrogenases = q.get_entry(ec_numbers='1.1.1.1')
+    >>> alcohol_dehydrogenases = q.entry(ec_numbers='1.1.1.1')
     >>> [x.name for x in q.get_entry(ec_numbers='1.1.1.1')]
     ['ADHX_RAT', 'ADH1_RAT', 'ADHX_HUMAN', 'ADHX_MOUSE']
-    >>> query.get_entry(ec_numbers=('1.1.1.1', '1.1.1.2'))
+    >>> query.entry(ec_numbers=('1.1.1.1', '1.1.1.2'))
     ['Adh5', 'Adh1', 'ADH5', 'Adh5', 'Adh6', 'ADH7', 'Adh7', 'Adh7', 'Adh1']
 
 As dataframe with a limit of 10 and accession number starts with Q9 (% used as wildcard)
 
 .. code-block:: python
 
-    >>> query.get_accession(as_df=True, limit=3, accession='Q9%')
+    >>> query.accession(as_df=True, limit=3, accession='Q9%')
        id accession  entry_id
     0   1    Q9CQV8         1
     1  32    Q9GIK8         6
