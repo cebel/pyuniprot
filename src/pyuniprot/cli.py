@@ -11,8 +11,9 @@ def update():
     """Update PyUniProt data"""
     database.update()
 
+
 @main.command()
-def web():
-    get_app().run()
-
-
+@click.option('--host', default='0.0.0.0', help='Flask host. Defaults to localhost')
+@click.option('--port', type=int, help='Flask port. Defaults to 5000')
+def web(host, port):
+    get_app().run(host=host, port=port)
