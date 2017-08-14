@@ -16,7 +16,7 @@ INSTALL_REQUIRES = [
     'pymysql',
     'requests',
     'click',
-    'lxml'
+    'tqdm',
 ]
 
 if sys.version_info < (3,):

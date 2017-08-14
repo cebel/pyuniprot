@@ -7,12 +7,13 @@ import gzip
 import configparser
 import time
 import importlib
+import tqdm
 
 import numpy as np
+import xml.etree.cElementTree as etree
 
 from io import BytesIO
 from datetime import datetime
-from lxml import etree
 from configparser import RawConfigParser
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -147,9 +148,7 @@ class BaseDbManager(object):
 
 class DbManager(BaseDbManager):
     pyuniprot_data_dir = PYUNIPROT_DATA_DIR
-    organism_hosts = {}
-    pmids = {}
-    accessions = {}
+    pmids = set()
     keywords = {}
     subcellular_locations = {}
     tissues = {}
@@ -195,8 +194,16 @@ class DbManager(BaseDbManager):
         interval = 1000
         start = False
 
+        if sys.platform in ('linux', 'darwin'):
+            import subprocess
+            number_of_lines = int(subprocess.getoutput("zcat {} | wc -l".format(xml_gzipped_file_path)))
+            tqdm_desc = 'Imported from {} lines'.format(number_of_lines)
+        else:
+            number_of_lines = None
+            tqdm_desc =None
+
         with gzip.open(xml_gzipped_file_path) as fd:
-            for line in fd:
+            for line in tqdm.tqdm(fd, desc=tqdm_desc, total=number_of_lines, mininterval=1):
                 end_of_file = line.startswith(b"</uniprot>")
                 if line.startswith(b"<entry "):
                     start = True
@@ -217,20 +224,6 @@ class DbManager(BaseDbManager):
                             entry_xml = ["<entries>"]
                             number_of_entries = 0
 
-    def import_xml_old(self, xml_file_path, taxids):
-        with open(xml_file_path) as f:
-            xml = BytesIO(f.read().encode('utf-8'))
-
-        entry_counter = 0
-        for action, element in etree.iterparse(xml, tag='{http://uniprot.org/uniprot}entry', huge_tree=True):
-            entry_counter += self.insert_entry(element, taxids)
-            element.clear()
-            del element
-
-            if entry_counter % 100 == 0 and entry_counter != 0:
-                self.session.commit()
-        self.session.commit()
-
     def insert_entries(self, entries_xml, taxids):
         """insert UniProt entries from XML"""
 
@@ -238,7 +231,10 @@ class DbManager(BaseDbManager):
         if 'etree' in sys.modules:
             importlib.reload(etree)
 
-        parser = etree.XMLParser(collect_ids=False)
+        # if lxml
+        # parser = etree.XMLParser(collect_ids=False)
+        # if xml
+        parser = etree.XMLParser()
         entries = etree.fromstringlist(entries_xml, parser)
 
         for entry in entries:
@@ -246,14 +242,13 @@ class DbManager(BaseDbManager):
             entry.clear()
             del entry
 
-        etree.clear_error_log()
         del entries
 
         self.session.commit()
 
     def insert_entry(self, entry, taxids):
         """insert UniProt entry"""
-        entry_dict = dict(entry.attrib)
+        entry_dict = entry.attrib
         entry_dict['created'] = datetime.strptime(entry_dict['created'], '%Y-%m-%d')
         entry_dict['modified'] = datetime.strptime(entry_dict['modified'], '%Y-%m-%d')
 
@@ -267,11 +262,13 @@ class DbManager(BaseDbManager):
     def update_entry_dict(self, entry, entry_dict, taxid):
         rp_full, rp_short = self.get_recommended_protein_name(entry)
 
+        pmids = self.get_pmids(entry)
+
         entry_dict.update(
             accessions=self.get_accessions(entry),
             sequence=self.get_sequence(entry),
             name=self.get_entry_name(entry),
-            pmids=self.get_pmids(entry),
+            pmids=pmids,
             subcellular_locations=self.get_subcellular_locations(entry),
             tissue_in_references=self.get_tissue_in_references(entry),
             organism_hosts=self.get_organism_hosts(entry),
@@ -406,16 +403,21 @@ class DbManager(BaseDbManager):
     @classmethod
     def get_gene_name(cls, entry):
         gene_name = entry.find("./gene/name[@type='primary']")
-        return gene_name.text if isinstance(gene_name, etree._Element) else None
+        return gene_name.text if isinstance(gene_name, etree.Element) else None
 
     @classmethod
     def get_other_gene_names(cls, entry):
         alternative_gene_names = []
 
         for alternative_gene_name in entry.findall("./gene/name"):
-            attrib_dict = dict(alternative_gene_name.attrib)
-            if attrib_dict['type'] != 'primary':
-                alternative_gene_name_dict = {'type_': attrib_dict['type'], 'name': alternative_gene_name.text}
+
+            if alternative_gene_name.attrib['type'] != 'primary':
+
+                alternative_gene_name_dict = {
+                    'type_': alternative_gene_name.attrib['type'],
+                    'name': alternative_gene_name.text
+                }
+
                 alternative_gene_names.append(models.OtherGeneName(**alternative_gene_name_dict))
 
         return alternative_gene_names
@@ -429,8 +431,8 @@ class DbManager(BaseDbManager):
         db_refs = []
 
         for db_ref in entry.findall("./dbReference"):
-            attrib_dict = dict(db_ref.attrib)
-            db_ref_dict = {'identifier': attrib_dict['id'], 'type_': attrib_dict['type']}
+
+            db_ref_dict = {'identifier': db_ref.attrib['id'], 'type_': db_ref.attrib['type']}
             db_refs.append(models.DbReference(**db_ref_dict))
 
         return db_refs
@@ -444,14 +446,15 @@ class DbManager(BaseDbManager):
         features = []
 
         for feature in entry.findall("./feature"):
-            attrib_dict = dict(feature.attrib)
+
             feature_dict = {
-                'description': attrib_dict.get('description'),
-                'type_': attrib_dict['type']
+                'description': feature.attrib.get('description'),
+                'type_': feature.attrib['type'],
+                'identifier': feature.attrib.get('id')
             }
-            if 'id' in attrib_dict:
-                feature_dict['identifier'] = attrib_dict.pop('id')
+
             features.append(models.Feature(**feature_dict))
+
         return features
 
     @classmethod
@@ -479,20 +482,64 @@ class DbManager(BaseDbManager):
 
     def get_pmids(self, entry):
         pmids = []
+        # /dbReference[@type='PubMed']
+        citations = entry.iterfind("./reference/citation")
+
+        for citation in citations:
+
+            for pubmed_ref in citation.findall('dbReference[@type="PubMed"]'):
+
+                pmid_number = pubmed_ref.get('id')
+
+                if pmid_number in self.pmids:
+
+                    pmid_sqlalchemy_obj = self.session.query(models.Pmid)\
+                        .filter(models.Pmid.pmid == pmid_number).one()
+
+                    pmids.append(pmid_sqlalchemy_obj)
+
+                else:
+                    pmid_dict = citation.attrib
+                    del pmid_dict['type'] # not needed because already filtered for PubMed
+
+                    pmid_dict.update(pmid=pmid_number)
+                    title_tag = citation.find('./title')
+
+                    if title_tag is not None:
+                        pmid_dict.update(title=title_tag.text)
+
+                    pmid_sqlalchemy_obj = models.Pmid(**pmid_dict)
+                    self.session.add(pmid_sqlalchemy_obj)
+                    self.session.flush()
+
+                    self.pmids |= set([pmid_number, ])
+
+        return pmids
+
+    def get_pmids_old(self, entry):
+        pmids = []
         query = "./reference/citation/dbReference[@type='PubMed']"
         pmids_found = entry.findall(query)
+
         for pmid in pmids_found:
+
             pmid_number = pmid.get('id')
+
             if pmid_number not in self.pmids:
+
                 citation = pmid.getparent()
                 pmid_dict = dict(citation.attrib)
                 del pmid_dict['type'] # not needed because already filtered for PubMed
                 pmid_dict.update(pmid=pmid_number)
                 title_tag = citation.find('./title')
+
                 if title_tag is not None:
                     pmid_dict.update(title=title_tag.text)
+
                 self.pmids[pmid_number] = models.Pmid(**pmid_dict)
+
             pmids.append(self.pmids[pmid_number])
+
         return pmids
 
     @classmethod

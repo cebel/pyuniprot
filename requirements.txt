@@ -8,3 +8,4 @@ sqlalchemy
 click
 pymysql
 lxml
+tqdm
