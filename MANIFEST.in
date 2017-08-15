@@ -1,0 +1,23 @@
+include *.txt
+include LICENSE
+include tox.ini
+exclude .bumpversion.cfg
+
+recursive-include docs *.bat
+recursive-include docs *.py
+recursive-include docs *.rst
+recursive-include docs Makefile
+recursive-include src *.py
+
+global-exclude .idea .idea/* *.py[cod] __pycache__ *.so *.dylib .DS_Store
+
+include *.rst
+recursive-include tests *.gz
+recursive-include tests *.py
+recursive-include tests *.tsv
+recursive-include docs *.dot
+recursive-include docs *.png
+recursive-include docs *.svg
+
+include *.rst *.txt *.yml LICENSE tox.ini docs/Makefile .coveragerc
+exclude docs/build
