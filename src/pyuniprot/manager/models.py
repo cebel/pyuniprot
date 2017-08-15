@@ -664,7 +664,7 @@ class Feature(Base, MasterModel):
     """
     type_ = Column(String(255))
     identifier = Column(String(255))
-    description = Column(String(255))
+    description = Column(Text)
 
     entry_id = foreign_key_to('entry')
     entry = relationship("Entry", back_populates="features")

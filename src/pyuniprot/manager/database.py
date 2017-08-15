@@ -6,13 +6,13 @@ import sys
 import gzip
 import configparser
 import time
-import importlib
-import tqdm
+import re
+
 
 import numpy as np
 import xml.etree.cElementTree as etree
 
-from io import BytesIO
+from tqdm import tqdm
 from datetime import datetime
 from configparser import RawConfigParser
 from sqlalchemy import create_engine, inspect
@@ -92,9 +92,9 @@ class BaseDbManager(object):
                 bind=self.engine,
                 autoflush=False,
                 autocommit=False,
-                expire_on_commit=False
+                expire_on_commit=True
             )
-            self.session = scoped_session(self.sessionmaker)()
+            self.session = scoped_session(self.sessionmaker)
         except:
             self.set_connection_string_by_user_input()
             self.__init__()
@@ -161,6 +161,7 @@ class DbManager(BaseDbManager):
         :type connection: str
         """
         super(DbManager, self).__init__(connection=connection)
+        self.parser = None
 
     def db_import_xml(self, url=None, force_download=False, taxids=None):
         """Updates the CTD database
@@ -187,67 +188,91 @@ class DbManager(BaseDbManager):
         self.import_xml(xml_gzipped_file_path, taxids)
         self.session.close()
 
+
     def import_xml(self, xml_gzipped_file_path, taxids):
-        """Imports XML"""
-        entry_xml = ['<entries>']
+        """Imports XML
+
+        :param str xml_gzipped_file_path: path to XML file
+        :param int,(int,),[int,] taxids: NCBI taxonomy identifier
+        """
+
+        entry_xml = '<entries>'
         number_of_entries = 0
         interval = 1000
         start = False
+        end_of_file = False
 
         if sys.platform in ('linux', 'darwin'):
             import subprocess
             number_of_lines = int(subprocess.getoutput("zcat {} | wc -l".format(xml_gzipped_file_path)))
             tqdm_desc = 'Imported from {} lines'.format(number_of_lines)
+
         else:
             number_of_lines = None
-            tqdm_desc =None
+            tqdm_desc = None
 
         with gzip.open(xml_gzipped_file_path) as fd:
-            for line in tqdm.tqdm(fd, desc=tqdm_desc, total=number_of_lines, mininterval=1):
+
+            for line in tqdm(fd, desc=tqdm_desc, total=number_of_lines, mininterval=1):
+
                 end_of_file = line.startswith(b"</uniprot>")
+
                 if line.startswith(b"<entry "):
                     start = True
+
                 elif end_of_file:
                     start = False
+
                 if start:
-                    entry_xml += [line.decode("utf-8")]
+                    entry_xml += line.decode("utf-8")
+
                 if line.startswith(b"</entry>") or end_of_file:
                     number_of_entries += 1
                     start = False
 
                     if number_of_entries == interval or end_of_file:
-                        entry_xml += ["</entries>"]
+
+                        entry_xml += "</entries>"
                         self.insert_entries(entry_xml, taxids)
+
                         if end_of_file:
                             break
+
                         else:
-                            entry_xml = ["<entries>"]
+                            entry_xml = "<entries>"
                             number_of_entries = 0
 
     def insert_entries(self, entries_xml, taxids):
-        """insert UniProt entries from XML"""
+        """
+        insert UniProt entries from XML
 
-        # to avoid memory leak reload of etree is necessary
-        if 'etree' in sys.modules:
-            importlib.reload(etree)
+        :param str entries_xml: XML string
+        :param int,tuple,list taxids: NCBI taxonomy IDs
+        :return:
+        """
 
-        # if lxml
-        # parser = etree.XMLParser(collect_ids=False)
-        # if xml
-        parser = etree.XMLParser()
-        entries = etree.fromstringlist(entries_xml, parser)
+        entries = etree.fromstring(entries_xml)
+        del entries_xml
 
         for entry in entries:
             self.insert_entry(entry, taxids)
             entry.clear()
             del entry
 
+        entries.clear()
         del entries
 
         self.session.commit()
 
+    # profile
     def insert_entry(self, entry, taxids):
-        """insert UniProt entry"""
+        """
+        insert UniProt entry"
+
+        :param entry: XML node entry
+        :param taxids: int,tuple,list taxids: NCBI taxonomy IDs
+        :return:
+        """
         entry_dict = entry.attrib
         entry_dict['created'] = datetime.strptime(entry_dict['created'], '%Y-%m-%d')
         entry_dict['modified'] = datetime.strptime(entry_dict['modified'], '%Y-%m-%d')
@@ -255,50 +280,90 @@ class DbManager(BaseDbManager):
         taxid = self.get_taxid(entry)
 
         if taxids is None or taxid in taxids:
-            self.update_entry_dict(entry, entry_dict, taxid)
+            entry_dict = self.update_entry_dict(entry, entry_dict, taxid)
             entry_obj = models.Entry(**entry_dict)
+            del entry_dict
+
             self.session.add(entry_obj)
 
+    # @profile
     def update_entry_dict(self, entry, entry_dict, taxid):
+        """
+
+        :param entry: XML node entry
+        :param entry_dict: dictionary used to initialize `models.Entry`
+        :param int taxid: NCBI taxonomy ID
+        :return:
+        """
         rp_full, rp_short = self.get_recommended_protein_name(entry)
 
         pmids = self.get_pmids(entry)
+        accessions = self.get_accessions(entry)
+        sequence = self.get_sequence(entry)
+        name = self.get_entry_name(entry)
+        subcellular_locations = self.get_subcellular_locations(entry)
+        tissue_in_references = self.get_tissue_in_references(entry)
+        organism_hosts = self.get_organism_hosts(entry)
+        db_references = self.get_db_references(entry)
+        other_gene_names = self.get_other_gene_names(entry)
+        features = self.get_features(entry)
+        functions = self.get_functions(entry)
+        gene_name = self.get_gene_name(entry)
+        keywords = self.get_keywords(entry)
+        ec_numbers = self.get_ec_numbers(entry)
+        alternative_full_names = self.get_alternative_full_names(entry)
+        alternative_short_names = self.get_alternative_short_names(entry)
+        disease_comments = self.get_disease_comments(entry)
+        tissue_specificities = self.get_tissue_specificities(entry)
 
         entry_dict.update(
-            accessions=self.get_accessions(entry),
-            sequence=self.get_sequence(entry),
-            name=self.get_entry_name(entry),
+            accessions=accessions,
+            sequence=sequence,
+            name=name,
             pmids=pmids,
-            subcellular_locations=self.get_subcellular_locations(entry),
-            tissue_in_references=self.get_tissue_in_references(entry),
-            organism_hosts=self.get_organism_hosts(entry),
+            subcellular_locations=subcellular_locations,
+            tissue_in_references=tissue_in_references,
+            organism_hosts=organism_hosts,
             recommended_full_name=rp_full,
             recommended_short_name=rp_short,
             taxid=taxid,
-            db_references=self.get_db_references(entry),
-            other_gene_names=self.get_other_gene_names(entry),
-            features=self.get_features(entry),
-            functions=self.get_functions(entry),
-            gene_name=self.get_gene_name(entry),
-            keywords=self.get_keywords(entry),
-            ec_numbers=self.get_ec_numbers(entry),
-            alternative_full_names=self.get_alternative_full_names(entry),
-            alternative_short_names=self.get_alternative_short_names(entry),
-            disease_comments=self.get_disease_comments(entry),
-            tissue_specificities=self.get_tissue_specificities(entry)
+            db_references=db_references,
+            other_gene_names=other_gene_names,
+            features=features,
+            functions=functions,
+            gene_name=gene_name,
+            keywords=keywords,
+            ec_numbers=ec_numbers,
+            alternative_full_names=alternative_full_names,
+            alternative_short_names=alternative_short_names,
+            disease_comments=disease_comments,
+            tissue_specificities=tissue_specificities
         )
         return entry_dict
 
     @classmethod
     def get_sequence(cls, entry):
-        query = "./sequence"
-        seq_tag = entry.find(query)
-        return models.Sequence(sequence=seq_tag.text)
+        """
+        get models.Sequence object from XML node entry
+
+        :param entry: XML node entry
+        :return: :class:`pyuniprot.manager.models.Sequence` object
+        """
+        seq_tag = entry.find("./sequence")
+        seq = seq_tag.text
+        seq_tag.clear()
+        return models.Sequence(sequence=seq)
 
     def get_tissue_in_references(self, entry):
+        """
+        get list of models.TissueInReference from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.TissueInReference` objects
+        """
         tissue_in_references = []
         query = "./reference/source/tissue"
-        tissues = {x.text for x in entry.findall(query)}
+        tissues = {x.text for x in entry.iterfind(query)}
 
         for tissue in tissues:
 
@@ -310,19 +375,31 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_tissue_specificities(cls, entry):
+        """
+        get list of :class:`pyuniprot.manager.models.TissueSpecificity` object from XML node entry
+
+        :param entry: XML node entry
+        :return: models.TissueSpecificity object
+        """
         tissue_specificities = []
 
         query = "./comment[@type='tissue specificity']/text"
 
-        for ts in entry.findall(query):
+        for ts in entry.iterfind(query):
             tissue_specificities.append(models.TissueSpecificity(comment=ts.text))
 
         return tissue_specificities
 
     def get_subcellular_locations(self, entry):
+        """
+        get list of models.SubcellularLocation object from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.SubcellularLocation` object
+        """
         subcellular_locations = []
         query = './comment/subcellularLocation/location'
-        sls = {x.text for x in entry.findall(query)}
+        sls = {x.text for x in entry.iterfind(query)}
 
         for sl in sls:
 
@@ -333,83 +410,140 @@ class DbManager(BaseDbManager):
         return subcellular_locations
 
     def get_keywords(self, entry):
-        keywords = []
+        """
+        get list of models.Keyword objects from XML node entry
 
-        for keyword in entry.findall("./keyword"):
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.Keyword` objects
+        """
+        keyword_objects = []
+
+        for keyword in entry.iterfind("./keyword"):
             identifier = keyword.get('id')
             name = keyword.text
             keyword_hash = hash(identifier)
 
             if keyword_hash not in self.keywords:
                 self.keywords[keyword_hash] = models.Keyword(**{'identifier': identifier, 'name': name})
-            keywords.append(self.keywords[keyword_hash])
 
-        return keywords
+            keyword_objects.append(self.keywords[keyword_hash])
+
+        return keyword_objects
 
     @classmethod
     def get_entry_name(cls, entry):
+        """
+        get entry name as string from XML node entry
+
+        :param entry: XML node entry
+        :return: unique entry name
+        """
         name = entry.find('./name').text
         return name
 
     def get_disease_comments(self, entry):
+        """
+        get list of models.Disease objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.Disease` objects
+        """
         disease_comments = []
         query = "./comment[@type='disease']"
 
-        for disease_comment in entry.findall(query):
+        for disease_comment in entry.iterfind(query):
             value_dict = {'comment': disease_comment.find('./text').text}
 
             disease = disease_comment.find("./disease")
 
             if disease is not None:
                 disease_dict = {'identifier': disease.get('id')}
+
                 for element in disease:
                     key = element.tag
+
                     if key in ['acronym', 'description', 'name']:
                         disease_dict[key] = element.text
+
                     if key == 'dbReference':
                         disease_dict['ref_id'] = element.get('id')
                         disease_dict['ref_type'] = element.get('type')
+
                 disease_obj = models.get_or_create(self.session, models.Disease, **disease_dict)
                 self.session.add(disease_obj)
                 self.session.flush()
                 value_dict['disease_id'] = disease_obj.id
+
             disease_comments.append(models.DiseaseComment(**value_dict))
+
         return disease_comments
 
     @classmethod
     def get_alternative_full_names(cls, entry):
+        """
+        get list of models.AlternativeFullName objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.AlternativeFullName` objects
+        """
         names = []
         query = "./protein/alternativeName/fullName"
-        for name in entry.findall(query):
+        for name in entry.iterfind(query):
             names.append(models.AlternativeFullName(name=name.text))
+
         return names
 
     @classmethod
     def get_alternative_short_names(cls, entry):
+        """
+        get list of models.AlternativeShortName objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.AlternativeShortName` objects
+        """
         names = []
         query = "./protein/alternativeName/shortName"
-        for name in entry.findall(query):
+        for name in entry.iterfind(query):
             names.append(models.AlternativeShortName(name=name.text))
+
         return names
 
     @classmethod
     def get_ec_numbers(cls, entry):
+        """
+        get list of models.ECNumber objects from XML node entry
+
+        :param entry:  XML node entry
+        :return: list of models.ECNumber objects
+        """
         ec_numbers = []
 
-        for ec in entry.findall("./protein/recommendedName/ecNumber"):
+        for ec in entry.iterfind("./protein/recommendedName/ecNumber"):
             ec_numbers.append(models.ECNumber(ec_number=ec.text))
         return ec_numbers
 
     @classmethod
     def get_gene_name(cls, entry):
+        """
+        get primary gene name from XML node entry
+
+        :param entry: XML node entry
+        :return: str
+        """
         gene_name = entry.find("./gene/name[@type='primary']")
         return gene_name.text if isinstance(gene_name, etree.Element) else None
 
     @classmethod
     def get_other_gene_names(cls, entry):
+        """
+        get list of `models.OtherGeneName` objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.models.OtherGeneName` objects
+        """
         alternative_gene_names = []
 
-        for alternative_gene_name in entry.findall("./gene/name"):
+        for alternative_gene_name in entry.iterfind("./gene/name"):
 
             if alternative_gene_name.attrib['type'] != 'primary':
 
@@ -424,13 +558,25 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_accessions(cls, entry):
-        return [models.Accession(accession=x.text) for x in entry.findall("./accession")]
+        """
+        get list of models.Accession from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.Accession` objects
+        """
+        return [models.Accession(accession=x.text) for x in entry.iterfind("./accession")]
 
     @classmethod
     def get_db_references(cls, entry):
+        """
+        get list of `models.DbReference` from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.DbReference`
+        """
         db_refs = []
 
-        for db_ref in entry.findall("./dbReference"):
+        for db_ref in entry.iterfind("./dbReference"):
 
             db_ref_dict = {'identifier': db_ref.attrib['id'], 'type_': db_ref.attrib['type']}
             db_refs.append(models.DbReference(**db_ref_dict))
@@ -439,13 +585,25 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_query_string(cls, query):
+        """
+        get correct XPath string if XML namespace is ignored (not used in the current implementation)
+
+        :param str query: query string without namespace
+        :return: query string with namespace
+        """
         return '/{http://uniprot.org/uniprot}'.join(query.split('/'))
 
     @classmethod
     def get_features(cls, entry):
+        """
+        get list of `models.Feature` from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.Feature`
+        """
         features = []
 
-        for feature in entry.findall("./feature"):
+        for feature in entry.iterfind("./feature"):
 
             feature_dict = {
                 'description': feature.attrib.get('description'),
@@ -459,11 +617,23 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_taxid(cls, entry):
+        """
+        get NCBI taxonomy identifier from XML node entry
+
+        :param entry:X ML node entry
+        :return: int
+        """
         query = "./organism/dbReference[@type='NCBI Taxonomy']"
         return int(entry.find(query).get('id'))
 
     @classmethod
     def get_recommended_protein_name(cls, entry):
+        """
+        get recommended full and short protein name as tuple from XML node
+
+        :param entry: XML node entry
+        :return: (str, str) => (full, short)
+        """
         query_full = "./protein/recommendedName/fullName"
         full_name = entry.find(query_full).text
 
@@ -477,17 +647,28 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_organism_hosts(cls, entry):
+        """
+        get list of `models.OrganismHost` objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.OrganismHost` objects
+        """
+
         query = "./organismHost/dbReference[@type='NCBI Taxonomy']"
-        return [models.OrganismHost(taxid=x.get('id')) for x in entry.findall(query)]
+        return [models.OrganismHost(taxid=x.get('id')) for x in entry.iterfind(query)]
 
     def get_pmids(self, entry):
+        """
+        get `models.Pmid` objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.Pmid` objects
+        """
         pmids = []
-        # /dbReference[@type='PubMed']
-        citations = entry.iterfind("./reference/citation")
 
-        for citation in citations:
+        for citation in entry.iterfind("./reference/citation"):
 
-            for pubmed_ref in citation.findall('dbReference[@type="PubMed"]'):
+            for pubmed_ref in citation.iterfind('dbReference[@type="PubMed"]'):
 
                 pmid_number = pubmed_ref.get('id')
 
@@ -500,6 +681,9 @@ class DbManager(BaseDbManager):
 
                 else:
                     pmid_dict = citation.attrib
+                    if not re.search('^\d+$', pmid_dict['volume']):
+                        pmid_dict['volume'] = -1
+
                     del pmid_dict['type'] # not needed because already filtered for PubMed
 
                     pmid_dict.update(pmid=pmid_number)
@@ -512,43 +696,26 @@ class DbManager(BaseDbManager):
                     self.session.add(pmid_sqlalchemy_obj)
                     self.session.flush()
 
-                    self.pmids |= set([pmid_number, ])
+                    pmids.append(pmid_sqlalchemy_obj)
 
-        return pmids
-
-    def get_pmids_old(self, entry):
-        pmids = []
-        query = "./reference/citation/dbReference[@type='PubMed']"
-        pmids_found = entry.findall(query)
-
-        for pmid in pmids_found:
-
-            pmid_number = pmid.get('id')
-
-            if pmid_number not in self.pmids:
-
-                citation = pmid.getparent()
-                pmid_dict = dict(citation.attrib)
-                del pmid_dict['type'] # not needed because already filtered for PubMed
-                pmid_dict.update(pmid=pmid_number)
-                title_tag = citation.find('./title')
-
-                if title_tag is not None:
-                    pmid_dict.update(title=title_tag.text)
-
-                self.pmids[pmid_number] = models.Pmid(**pmid_dict)
-
-            pmids.append(self.pmids[pmid_number])
+                    self.pmids |= set([pmid_number, ]) # extend the cache of identifiers
 
         return pmids
 
     @classmethod
     def get_functions(cls, entry):
+        """
+        get `models.Function` objects from XML node entry
+
+        :param entry: XML node entry
+        :return: list of :class:`pyuniprot.manager.models.Function` objects
+        """
         comments = []
         query = "./comment[@type='function']"
-        for comment in entry.findall(query):
+        for comment in entry.iterfind(query):
             text = comment.find('./text').text
             comments.append(models.Function(text=text))
+
         return comments
 
     @classmethod
@@ -577,7 +744,7 @@ class DbManager(BaseDbManager):
     def get_path_to_file_from_url(cls, url):
         """standard file path
         
-        :param str url: CTD download URL 
+        :param str url: download URL
         """
         file_name = urlparse(url).path.split('/')[-1]
         return os.path.join(cls.pyuniprot_data_dir, file_name)
@@ -649,6 +816,15 @@ def update(connection=None, urls=None, force_download=False, taxids=None):
 
 def set_mysql_connection(host='localhost', user='pyuniprot_user', passwd='pyuniprot_passwd', db='pyuniprot',
                          charset='utf8'):
+    """Method to set a MySQL connection
+
+    :param host: MySQL database host
+    :param user: MySQL database user
+    :param passwd: MySQL database password
+    :param db: MySQL database name
+    :param charset: MySQL database charater set
+    :return: None
+    """
     set_connection('mysql+pymysql://{user}:{passwd}@{host}/{db}?charset={charset}'.format(
         host=host,
         user=user,
@@ -664,7 +840,7 @@ def set_test_connection():
 
 def set_connection(connection=defaults.sqlalchemy_connection_string_default):
     """
-    Set the connection string for sqlalchemy
+    Set the connection string for sqlalchemy and writes to the configuration file
     :param str connection: sqlalchemy connection string
     """
     cfp = defaults.config_file_path
