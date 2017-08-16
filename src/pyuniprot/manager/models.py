@@ -878,8 +878,6 @@ class TissueInReference(Base, MasterModel):
 
     **Table view**
 
-    .. image:: _static/models/tissue_in_reference.png
-        :target: _images/tissue_in_reference.png
     """
     tissue = Column(String(255), unique=True)
 
