@@ -1,19 +1,21 @@
 PyUniProt |stable_build|
-====================
+========================
 
 |stable_documentation| |pypi_license|
 
 `PyUniProt <http://pyUniProt.readthedocs.io>`_ is a Python package
 to access and query chemical–gene/protein interactions, chemical–disease and gene–disease
-relationships by data provided by the `Comparative Toxicogenomics Database <http://ctdbase.org>`_ .
-Data are installed in a (local or remte) RDBMS enabling bioinformatic algorithms very fast response times
+relationships by data provided by the European Bioinformatics Institute (EMBL-EBI),
+the SIB Swiss Institute of Bioinformatics and the Protein Information Resource (PIR).
+
+Data are installed in a (local or remote) RDBMS enabling bioinformatic algorithms very fast response times
 to sophisticated queries and high flexibility by using SOLAlchemy database layer.
 PyUniProt is developed by the
 `Department of Bioinformatics <https://www.scai.fraunhofer.de/en/business-research-areas/bioinformatics.html>`_
 at the Fraunhofer Institute for Algorithms and Scientific Computing
 `SCAI <https://www.scai.fraunhofer.de/en.html>`_
-For more in for information about CTD go to
-`this section in the documentation <http://pyUniProt.readthedocs.io/en/latest/ctd.html>`_.
+For more in for information about pyUniProt go to
+`the documentation <http://pyUniProt.readthedocs.io>`_.
 
 |er_model|
 
@@ -192,16 +194,10 @@ See the `installation documentation <http://pyuniprot.readthedocs.io/en/latest/i
 instructions. Also, check the change log at :code:`CHANGELOG.rst`.
 
 UniProt tools and licence (use of data)
------------------------------------
-CTD provides also many online `query interfaces <http://ctdbase.org/search/>`_ and
-`tools to analyse data <http://ctdbase.org/tools/>`_ on their website.
+---------------------------------------
+UniProt provides also many online `query interfaces <http://www.uniprot.org>`_ on their website.
 
-Please be aware of the `CTD licence <http://ctdbase.org/about/legal.jsp>`_ which allows the use of data only for
-research and educational purposes. Medical treatment decisions should not be made based on the information in CTD.
-
-Any reproduction or use for commercial purpose is prohibited without the prior express written permission of the
-MDI Biological Laboratory and NC State University.
-
+Please be aware of the `UniProt licence <http://www.uniprot.org/help/license>`_.
 
 Links
 -----
