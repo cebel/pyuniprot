@@ -1,11 +1,9 @@
-flasgger
-wtforms
-passlib
-flask
-pandas
-requests
 sqlalchemy
-click
+pandas
 pymysql
-lxml
+requests
+click
 tqdm
+flasgger
+passlib
+wtforms

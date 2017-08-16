@@ -17,6 +17,9 @@ INSTALL_REQUIRES = [
     'requests',
     'click',
     'tqdm',
+    'flasgger',
+    'passlib',
+    'wtforms'
 ]
 
 if sys.version_info < (3,):
