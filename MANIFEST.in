@@ -8,8 +8,9 @@ recursive-include docs *.py
 recursive-include docs *.rst
 recursive-include docs Makefile
 recursive-include src *.py
+recursive-include src *.html
 
-global-exclude .idea .idea/* *.py[cod] __pycache__ *.so *.dylib .DS_Store
+global-exclude .idea .idea/* *.py[cod] __pycache__ *.so *.dylib .DS_Store docs/build/*
 
 include *.rst
 recursive-include tests *.gz
