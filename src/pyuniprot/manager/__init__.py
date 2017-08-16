@@ -4,7 +4,6 @@ databases.
 """
 from . import defaults
 from . import models
-#from . import table_conf
 from . import database
 from . import query
 from . import make_json_serializable

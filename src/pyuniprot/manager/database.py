@@ -22,7 +22,6 @@ from sqlalchemy.sql import sqltypes
 
 from . import defaults
 from . import models
-from ..constants import bcolors
 from ..constants import PYUNIPROT_DATA_DIR, PYUNIPROT_DIR
 
 
@@ -96,37 +95,7 @@ class BaseDbManager(object):
             )
             self.session = scoped_session(self.sessionmaker)
         except:
-            self.set_connection_string_by_user_input()
-            self.__init__()
-
-    def set_connection_string_by_user_input(self):
-        """If no connection is available request of connection string by user"""
-        user_connection = input(
-            bcolors.WARNING + "\nFor any reason connection to " + bcolors.ENDC +
-            bcolors.FAIL + "{}".format(self.connection) + bcolors.ENDC +
-            bcolors.WARNING + " is not possible.\n\n" + bcolors.ENDC +
-            "For more information about SQLAlchemy connection strings go to:\n" +
-            "http://docs.sqlalchemy.org/en/latest/core/engines.html\n\n"
-            "Please insert a valid connection string:\n" +
-            bcolors.UNDERLINE + "Examples:\n\n" + bcolors.ENDC +
-            "MySQL (recommended):\n" +
-            bcolors.OKGREEN + "\tmysql+pymysql://user:passwd@localhost/database?charset=utf8\n" + bcolors.ENDC +
-            "PostgreSQL:\n" +
-            bcolors.OKGREEN + "\tpostgresql://scott:tiger@localhost/mydatabase\n" + bcolors.ENDC +
-            "MsSQL (pyodbc have to be installed):\n" +
-            bcolors.OKGREEN + "\tmssql+pyodbc://user:passwd@database\n" + bcolors.ENDC +
-            "SQLite (always works):\n" +
-            " - Linux:\n" +
-            bcolors.OKGREEN + "\tsqlite:////absolute/path/to/database.db\n" + bcolors.ENDC +
-            " - Windows:\n" +
-            bcolors.OKGREEN + "\tsqlite:///C:\\path\\to\\database.db\n" + bcolors.ENDC +
-            "Oracle:\n" +
-            bcolors.OKGREEN + "\toracle://user:passwd@127.0.0.1:1521/database\n\n" + bcolors.ENDC +
-            "[RETURN] for standard connection {}:\n".format(defaults.sqlalchemy_connection_string_default)
-        )
-        if not (user_connection or user_connection.strip()):
-            user_connection = defaults.sqlalchemy_connection_string_default
-        set_connection(user_connection.strip())
+            log.warning('No valid database connection. Execute `pyuniprot connection` on command line')
 
     def _create_tables(self, checkfirst=True):
         """creates all tables from models in your database
@@ -163,7 +132,7 @@ class DbManager(BaseDbManager):
         super(DbManager, self).__init__(connection=connection)
         self.parser = None
 
-    def db_import_xml(self, url=None, force_download=False, taxids=None):
+    def db_import_xml(self, url=None, force_download=False, taxids=None, silent=False):
         """Updates the CTD database
         
         1. downloads gzipped XML
@@ -185,11 +154,10 @@ class DbManager(BaseDbManager):
         self._drop_tables()
         xml_gzipped_file_path = self.download(url, force_download)
         self._create_tables()
-        self.import_xml(xml_gzipped_file_path, taxids)
+        self.import_xml(xml_gzipped_file_path, taxids, silent)
         self.session.close()
 
-
-    def import_xml(self, xml_gzipped_file_path, taxids):
+    def import_xml(self, xml_gzipped_file_path, taxids, silent=False):
         """Imports XML
 
         :param str xml_gzipped_file_path: path to XML file
@@ -200,7 +168,6 @@ class DbManager(BaseDbManager):
         number_of_entries = 0
         interval = 1000
         start = False
-        end_of_file = False
 
         if sys.platform in ('linux', 'darwin'):
             import subprocess
@@ -213,7 +180,7 @@ class DbManager(BaseDbManager):
 
         with gzip.open(xml_gzipped_file_path) as fd:
 
-            for line in tqdm(fd, desc=tqdm_desc, total=number_of_lines, mininterval=1):
+            for line in tqdm(fd, desc=tqdm_desc, total=number_of_lines, mininterval=1, disable=silent):
 
                 end_of_file = line.startswith(b"</uniprot>")
 
@@ -796,7 +763,7 @@ class DbManager(BaseDbManager):
         fd.close()
 
 
-def update(connection=None, urls=None, force_download=False, taxids=None):
+def update(connection=None, urls=None, force_download=False, taxids=None, silent=False):
     """Updates CTD database
 
     :param urls: list of urls to download
@@ -810,7 +777,7 @@ def update(connection=None, urls=None, force_download=False, taxids=None):
     if isinstance(taxids, int):
         taxids = (taxids,)
     db = DbManager(connection)
-    db.db_import_xml(urls, force_download, taxids)
+    db.db_import_xml(urls, force_download, taxids, silent)
     db.session.close()
 
 
@@ -825,13 +792,16 @@ def set_mysql_connection(host='localhost', user='pyuniprot_user', passwd='pyunip
     :param charset: MySQL database charater set
     :return: None
     """
-    set_connection('mysql+pymysql://{user}:{passwd}@{host}/{db}?charset={charset}'.format(
+    connection_string = 'mysql+pymysql://{user}:{passwd}@{host}/{db}?charset={charset}'.format(
         host=host,
         user=user,
         passwd=passwd,
         db=db,
-        charset=charset)
+        charset=charset
     )
+    set_connection(connection_string)
+
+    return connection_string
 
 
 def set_test_connection():
@@ -845,6 +815,8 @@ def set_connection(connection=defaults.sqlalchemy_connection_string_default):
     """
     cfp = defaults.config_file_path
     config = RawConfigParser()
+
+    connection = connection.strip()
 
     if not os.path.exists(cfp):
         with open(cfp, 'w') as config_file:
