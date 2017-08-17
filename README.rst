@@ -1,3 +1,5 @@
+|project_logo_large|
+
 PyUniProt |stable_build|
 ========================
 
@@ -231,22 +233,25 @@ PyUniProt
 .. |pypi_version| image:: https://img.shields.io/pypi/v/PyUniProt.svg
     :alt: Current version on PyPI
 
-.. |phago_logo| image:: https://raw.githubusercontent.com/cebel/pyctd/master/docs/source/_static/logos/phago_logo.jpeg
+.. |phago_logo| image:: https://raw.githubusercontent.com/cebel/pyuniprot/master/docs/source/_static/logos/phago_logo.jpeg
     :target: https://www.imi.europa.eu/content/phago
     :alt: PHAGO project logo
 
-.. |aetionomy_logo| image:: https://raw.githubusercontent.com/cebel/pyctd/master/docs/source/_static/logos/aetionomy_logo.png
+.. |aetionomy_logo| image:: https://raw.githubusercontent.com/cebel/pyuniprot/master/docs/source/_static/logos/aetionomy_logo.png
     :target: http://www.aetionomy.eu/en/vision.html
     :alt: AETIONOMY project logo
 
-.. |imi_logo| image:: https://raw.githubusercontent.com/cebel/pyctd/master/docs/source/_static/logos/imi_logo.png
+.. |imi_logo| image:: https://raw.githubusercontent.com/cebel/pyuniprot/master/docs/source/_static/logos/imi_logo.png
     :target: https://www.imi.europa.eu/
     :alt: IMI project logo
 
-.. |scai_logo| image:: https://raw.githubusercontent.com/cebel/pyctd/master/docs/source/_static/logos/scai_logo.png
+.. |scai_logo| image:: https://raw.githubusercontent.com/cebel/pyuniprot/master/docs/source/_static/logos/scai_logo.png
     :target: https://www.scai.fraunhofer.de/en/business-research-areas/bioinformatics.html
     :alt: SCAI project logo
 
 .. |er_model| image:: https://owncloud.scai.fraunhofer.de/index.php/apps/files_sharing/ajax/publicpreview.php?x=1920&y=562&a=true&file=pyuniprot_er_model.png&t=QUm8KPPnNGoH8wp&scalingup=0
     :target: http://pyuniprot.readthedocs.io/en/latest/
     :alt: Entity relationship model
+
+.. |project_logo_large| image:: https://raw.githubusercontent.com/cebel/pyuniprot/master/docs/source/_static/logos/project_logo_large.png
+    :alt: Project logo
