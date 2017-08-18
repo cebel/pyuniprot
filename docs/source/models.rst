@@ -4,17 +4,6 @@ Data Models
 `PyUniProt` uses `SQLAlchemy <http://www.sqlalchemy.org/>`_ to store the data in the database.
 Use instance of :class:`pyuniprot.manager.query.QueryManager` to query the content of the database.
 
-.. table:: Truth table for "not"
-   :widths: auto
-
-   =====  =====
-     A    not A
-   =====  =====
-   False  True
-   True   False
-   =====  =====
-
-
 Entity–relationship model:
 
 .. image:: _static/models/all.png
