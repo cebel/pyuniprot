@@ -19,6 +19,10 @@ recursive-include tests *.tsv
 recursive-include docs *.dot
 recursive-include docs *.png
 recursive-include docs *.svg
+recursive-include docs *.jpeg
+recursive-include src *.png
+recursive-include tests *.xml
+recursive-include tests *.xsd
 
 include *.rst *.txt *.yml LICENSE tox.ini docs/Makefile .coveragerc
 exclude docs/build
