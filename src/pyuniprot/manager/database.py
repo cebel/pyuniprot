@@ -7,6 +7,8 @@ import gzip
 import configparser
 import time
 import re
+import subprocess
+import xml
 
 
 import numpy as np
@@ -170,7 +172,7 @@ class DbManager(BaseDbManager):
         start = False
 
         if sys.platform in ('linux', 'darwin'):
-            import subprocess
+            log.info('Load gzipped XML from {}'.format(xml_gzipped_file_path))
             number_of_lines = int(subprocess.getoutput("zcat {} | wc -l".format(xml_gzipped_file_path)))
             tqdm_desc = 'Imported from {} lines'.format(number_of_lines)
 
@@ -498,7 +500,8 @@ class DbManager(BaseDbManager):
         :return: str
         """
         gene_name = entry.find("./gene/name[@type='primary']")
-        return gene_name.text if isinstance(gene_name, etree.Element) else None
+
+        return gene_name.text if gene_name is not None and gene_name.text.strip() else None
 
     @classmethod
     def get_other_gene_names(cls, entry):

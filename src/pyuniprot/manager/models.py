@@ -343,6 +343,13 @@ class Disease(Base, MasterModel):
     disease_comments = relationship("DiseaseComment", back_populates="disease")
 
     @property
+    def entries(self):
+        entry_set = set()
+        for disease_comment in self.disease_comments:
+            entry_set |= set([disease_comment.entry])
+        return list(entry_set)
+
+    @property
     def data(self):
         entry_db_ids = []
         for disease_comment in self.disease_comments:

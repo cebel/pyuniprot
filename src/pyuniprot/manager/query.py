@@ -183,6 +183,10 @@ class QueryManager(BaseDbManager):
         :param dataset:
         :class:`models.Entry` object. `%` can be used as wildcard for string parameters (see examples below).
 
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.Entry`
+
         :param str,tuple name: UniProt entry name(s)
         :param str,tuple recommended_full_name: recommended full protein name(s)
         :param str,tuple recommended_short_name: recommended short protein name(s)
@@ -263,6 +267,10 @@ class QueryManager(BaseDbManager):
                 ):
         """Method to query :class:`pyuniprot.manager.models.Disease`
 
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.Disease`
+
         :param identifier: disease UniProt identifier
         :param ref_id: identifier of referenced database
         :param ref_type: database name
@@ -298,6 +306,10 @@ class QueryManager(BaseDbManager):
     def disease_comment(self, comment=None, entry_name=None, limit=None, as_df=False):
         """Method to query :class:`pyuniprot.manager.models.DiseaseComment`
 
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.DiseaseComment`
+
         :param comment: Comment to disease
         :param str entry_name: name in :class:`.models.Entry`
         :param int,tuple limit: Number of results, if limit=`None`, all results returned
@@ -314,6 +326,10 @@ class QueryManager(BaseDbManager):
 
     def other_gene_name(self, type_=None, name=None, entry_name=None, limit=None, as_df=None):
         """Method to query :class:`pyuniprot.manager.OtherGeneName`
+
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.OtherGeneName`
 
         :param str type_: type of gene name e.g. *synonym*
         :param str name: other gene name
@@ -336,6 +352,10 @@ class QueryManager(BaseDbManager):
 
     def alternative_full_name(self, name=None, entry_name=None, limit=None, as_df=False):
         """Method to query :class:`pyuniprot.manager.AlternativeFullName`
+
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.AlternativeFullName`
 
         :param str name: alternative full name
         :param str entry_name: name in :class:`.models.Entry`
@@ -408,6 +428,10 @@ class QueryManager(BaseDbManager):
              ):
         """Method to query :class:`pyuniprot.manager.Pmid`
 
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.Pmid`
+
         :param int pmid: PubMed identifier
         :param str entry_name: name in :class:`.models.Entry`
         :param first: first page
@@ -440,6 +464,10 @@ class QueryManager(BaseDbManager):
     def organism_host(self, taxid=None, entry_name=None, limit=None, as_df=False):
         """Method to query :class:`pyuniprot.manager.OrganismHost`
 
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.OrganismHost`
+
         :param taxid: NCBI taxonomy identifier
         :param str entry_name: name in :class:`.models.Entry`
         :param int,tuple limit: number of results, if limit=`None`, all results returned
@@ -458,6 +486,10 @@ class QueryManager(BaseDbManager):
         """Method to query :class:`pyuniprot.manager.models.DbReference`
 
         Check list of available databases with on :py:attr:`.dbreference_types`
+
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.DbReference`
 
         :param type_: type (or name) of database
         :param identifier: unique identifier in database
@@ -487,6 +519,10 @@ class QueryManager(BaseDbManager):
 
         Check available features types with ``pyuniprot.query().feature_types``
 
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.Feature`
+
         :param type_: type of feature
         :param identifier: feature identifier
         :param description: description of feature
@@ -509,7 +545,7 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def function(self, text=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Pmid`
+        """Method to query :class:`pyuniprot.manager.Function`
 
         .. seealso::
 
@@ -533,7 +569,7 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def ec_number(self, ec_number=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Pmid`
+        """Method to query :class:`pyuniprot.manager.ECNumber`
 
         .. seealso::
 
@@ -553,14 +589,35 @@ class QueryManager(BaseDbManager):
 
         return self._limit_and_df(q, limit, as_df)
 
+    def sequence(self, sequence=None, entry_name=None, limit=None, as_df=False):
+        """Method to query :class:`pyuniprot.manager.Sequence`
+
+        .. seealso::
+
+            :class:`pyuniprot.manager.models.Sequence`
+
+        :param sequence: AA sequence
+        :param str entry_name: name in :class:`.models.Entry`
+        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
+        :return: list of :class:`pyuniprot.manager.models.SubcellularLocation` objects or :class:`pandas.DataFrame`
+        """
+        q = self.session.query(models.Sequence)
+
+        q = self.get_model_queries(q, ((sequence, models.Sequence.sequence),))
+
+        q = self.get_many_to_many_queries(q, ((entry_name, models.SubcellularLocation.entries, models.Entry.name),))
+
+        return self._limit_and_df(q, limit, as_df)
+
     def subcellular_location(self, location=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Pmid`
+        """Method to query :class:`pyuniprot.manager.SubcellularLocation`
 
         .. seealso::
 
             :class:`pyuniprot.manager.models.SubcellularLocation`
 
-        :param location:
+        :param location: subcellular location
         :param str entry_name: name in :class:`.models.Entry`
         :param int,tuple limit: number of results, if limit=`None`, all results returned
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
@@ -575,7 +632,7 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def tissue_specificity(self, comment=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Pmid`
+        """Method to query :class:`pyuniprot.manager.TissueSpecificity`
 
         Provides information on the expression of a gene at the mRNA or protein level in cells or in tissues of
         multicellular organisms. By default, the information is derived from experiments at the mRNA level, unless

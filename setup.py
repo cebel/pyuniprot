@@ -19,7 +19,8 @@ INSTALL_REQUIRES = [
     'tqdm',
     'flasgger',
     'passlib',
-    'wtforms'
+    'wtforms',
+    'configparser'
 ]
 
 if sys.version_info < (3,):

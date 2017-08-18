@@ -13,9 +13,10 @@ DEFAULT_DATABASE_LOCATION = os.path.join(PYUNIPROT_DATA_DIR, DEFAULT_SQLITE_DATA
 DEFAULT_TEST_DATABASE_LOCATION = os.path.join(PYUNIPROT_DATA_DIR, DEFAULT_SQLITE_TEST_DATABASE_NAME)
 
 XML_SPROT_URL = "ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.xml.gz"
+XML_FILE_NAME = os.path.basename(XML_SPROT_URL)
 
 sqlalchemy_connection_string_default = 'sqlite:///' + DEFAULT_DATABASE_LOCATION
-sqlalchemy_connection_string_4_tests = 'sqlite:///' + DEFAULT_SQLITE_TEST_DATABASE_NAME
+sqlalchemy_connection_string_4_tests = 'sqlite:///' + DEFAULT_TEST_DATABASE_LOCATION
 
 sqlalchemy_connection_string_4_mysql = 'mysql+pymysql://pyuniprot:pyuniprot@localhost/pyuniprot?charset=utf8'
 sqlalchemy_connection_string_4_mysql_tests = 'mysql+pymysql://pyuniprot:pyuniprotd@localhost/pyuniprot_test?charset=utf8'
