@@ -20,7 +20,7 @@ query = manager.query.QueryManager
 
 __all__ = ['update', 'export_obo', 'query', 'set_connection', 'set_mysql_connection']
 
-__version__ = '0.0.4'
+__version__ = '0.0.5-dev'
 
 __title__ = 'PyUniProt'
 __description__ = 'Importing and querying UniProt'
