@@ -10,9 +10,11 @@ recursive-include docs Makefile
 recursive-include src *.py
 recursive-include src *.html
 
+
 global-exclude .idea .idea/* *.py[cod] __pycache__ *.so *.dylib .DS_Store docs/build/*
 
 include *.rst
+recursive-include tests *.txt
 recursive-include tests *.gz
 recursive-include tests *.py
 recursive-include tests *.tsv
