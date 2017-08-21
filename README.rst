@@ -114,8 +114,10 @@ Updating
 The updating process will download the *uniprot_sprot.xml.gz* file provided by the UniProt team on their ftp server
 `download page <ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/>`_
 
-.. warning:: Please note that UniProt download file needs ~700 Mb of disk space and the update takes ~2h only for
-human, mouse and rat (depending on your system)
+.. warning::
+
+    Please note that UniProt download file needs ~700 Mb of disk space and the update takes ~2h only for
+    human, mouse and rat (depending on your system)
 
 It is strongly recommended to restrict the entries liked to specific organisms your are interested in by parsing a list
 of NCBI Taxonomy IDs to the parameter `taxids`. To identify correct NCBI Taxonomy IDs please go to
