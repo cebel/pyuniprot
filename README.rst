@@ -1,7 +1,7 @@
-|project_logo_large|
-
 PyUniProt |stable_build|
 ========================
+
+|project_logo_large|
 
 |stable_documentation| |pypi_license|
 
