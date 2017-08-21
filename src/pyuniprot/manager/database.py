@@ -807,9 +807,9 @@ class DbManager(BaseDbManager):
             fd.write('synonym: "{}" EXACT GENE_NAME []\n'.format(entry.gene_name))
 
             for xref in entry.db_references:
-                if xref.type in ['GO', 'HGNC']:
+                if xref.type_ in ['GO', 'HGNC']:
                     xref.identifier = ':'.join(xref.identifier.split(':')[1:])
-                fd.write('xref: {}:{}\n'.format(xref.type, xref.identifier.replace('\\', '\\\\')))
+                fd.write('xref: {}:{}\n'.format(xref.type_, xref.identifier.replace('\\', '\\\\')))
 
         fd.close()
 

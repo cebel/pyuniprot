@@ -40,6 +40,14 @@ def main():
 
 
 @main.command()
+@click.option('-t', '--taxids', default=None, help='List of organisms imported by NCBI taxonomy IDs, '                                                   
+                                                   'e.g. 9606,10090,10116 ')
+@click.option('-p', '--path', help="path to OBO file")
+def obo(path, taxids=None):
+    database.export_obo(path)
+
+
+@main.command()
 @click.option('-t', '--taxids', default=None, help='List of organisms imported by NCBI taxonomy IDs, '
                                                    'e.g. 9606,10090,10116 ')
 @click.option('-c', '--conn', default=None, help='connection string to database, e.g. {}'.format(example_conn))

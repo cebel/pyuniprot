@@ -60,13 +60,18 @@ class QueryManager(BaseDbManager):
 
         for entry in q.all():
             obo_string += '\n[Term]\nid: SWISSPROT:{}\n'.format(entry.accessions[0])
+
             if len(entry.accessions) > 1:
                 for accession in entry.accessions[1:]:
                     obo_string += 'alt_id: {}\n'.format(accession)
+
             obo_string += 'name: {}\n'.format(entry.recommended_full_name)
-            for alternative_name in entry.alternative_names:
-                obo_string += 'synonym: "{}" EXACT ALTERNATIVE_NAME []\n'.format(alternative_name.fullName)
+
+            for alternative_name in entry.alternative_full_names     + entry.alternative_short_names:
+                obo_string += 'synonym: "{}" EXACT ALTERNATIVE_NAME []\n'.format(alternative_name.name)
+
             obo_string += 'synonym: "{}" EXACT GENE_NAME []\n'.format(entry.gene_name)
+
             for xref in entry.db_references:
                 if xref.type_ in ['GO', 'HGNC']:
                     xref.identifier = ':'.join(xref.identifier.split(':')[1:])
