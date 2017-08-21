@@ -1,0 +1,3 @@
+UniProt Knowledgebase Release 1968_12 consists of:
+UniProtKB/Swiss-Prot Release 1968_12 of 06-Dec-1968
+UniProtKB/TrEMBL Release 2003_04 of 25-Apr-2003

@@ -18,16 +18,16 @@
                 <li><a href="/apidocs"><img src="/flasgger_static/images/logo_small.png">Swagger</a></li>
             </ul>
 
-            <ul class="nav navbar-nav navbar-right">
-                {% if session.logged_in %}
-                    <li><a href="/dashboard">Dashboard</a></li>
-                    <small>Logged in as {{ session.username }}</small>
-                    <li><a href="/logout">Logout</a></li>
-                {% else %}
-                    <li><a href="/register">Register</a></li>
-                    <li><a href="/login">Login</a></li>
-                {%  endif %}
-            </ul>
+            {#<ul class="nav navbar-nav navbar-right">#}
+                {#% if session.logged_in %#}
+                    {#  <li><a href="/dashboard">Dashboard</a></li> #}
+                    {#  <small>Logged in as {#  {{ session.username }}</small> #}
+                    {#  <li><a href="/logout">Logout</a></li> #}
+                {#% else %#}
+                    {#  <li><a href="/register">Register</a></li> #}
+                    {# <li><a href="/login">Login</a></li> #}
+                {#%  endif %#}
+            {#  </ul>#}
         </div>
     </div>
 </nav>

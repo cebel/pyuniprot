@@ -10,40 +10,28 @@ import pyuniprot
 
 from pandas.core.frame import DataFrame
 from pyuniprot.constants import PYUNIPROT_DATA_DIR
-from pyuniprot.manager.database import DbManager, BaseDbManager
-from pyuniprot.manager.defaults import DEFAULT_TEST_DATABASE_LOCATION, sqlalchemy_connection_string_4_tests, \
-    XML_FILE_NAME
+from pyuniprot.manager.defaults import sqlalchemy_connection_string_4_tests
 from pyuniprot.manager import models
 
 from pyuniprot.manager.query import QueryManager
 
 log = logging.getLogger(__name__)
 
-this_path = os.path.dirname(os.path.realpath(__file__))
-test_xml_path = os.path.join(this_path, "data", XML_FILE_NAME)
-connection_string = sqlalchemy_connection_string_4_tests
-
-
-def download(cls, *args, **kwargs):
-    """overwrites pyuniprot.manager.database.DbManager.download in TestImport.setup"""
-    gziped_uniprot_file_loacation = os.path.join(PYUNIPROT_DATA_DIR, XML_FILE_NAME)
-    shutil.copyfile(test_xml_path, gziped_uniprot_file_loacation)
-    return gziped_uniprot_file_loacation
-
 
 class TestQuery(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        DbManager.download = download
-        pyuniprot.update(connection=connection_string)
-        cls.query = QueryManager(connection=connection_string)
-        cls.session = BaseDbManager(connection=connection_string).session
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        pyuniprot.manager.defaults.XML_DIR_NAME = os.path.join(this_path, "data")
+
+        conn = sqlalchemy_connection_string_4_tests
+        pyuniprot.update(connection=conn)
+        cls.query = QueryManager(connection=conn)
 
     @classmethod
     def tearDownClass(cls):
-        os.remove(DEFAULT_TEST_DATABASE_LOCATION)
         shutil.rmtree(PYUNIPROT_DATA_DIR)
-        cls.session.close()
+        cls.query.session.close()
 
     def test_number_of_inserts(self):
         models_list = [
@@ -67,7 +55,7 @@ class TestQuery(unittest.TestCase):
             (models.TissueSpecificity, 1),
         ]
         for model, num_of_results in models_list:
-            self.assertEqual(num_of_results, self.session.query(model).count())
+            self.assertEqual(num_of_results, self.query.session.query(model).count())
 
     def test_query_accession(self):
         accessions = self.query.accession(entry_name='5HT2A_PIG', limit=1, as_df=False)
@@ -297,3 +285,8 @@ class TestQuery(unittest.TestCase):
 
     def test_diseases(self):
         self.assertEqual(self.query.diseases, ['Psoriasis 1'])
+
+    def test_version(self):
+        expected_version = set(['Swiss-Prot:1968_12:1968-12-06', 'TrEMBL:2003_04:2003-04-25'])
+        query_set = set([str(x) for x in self.query.version])
+        self.assertEqual(expected_version, query_set)

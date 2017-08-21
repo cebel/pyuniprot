@@ -8,8 +8,8 @@ import configparser
 import time
 import re
 import subprocess
-import xml
-
+import shutil
+import sqlalchemy
 
 import numpy as np
 import xml.etree.cElementTree as etree
@@ -17,7 +17,7 @@ import xml.etree.cElementTree as etree
 from tqdm import tqdm
 from datetime import datetime
 from configparser import RawConfigParser
-from sqlalchemy import create_engine, inspect
+
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.engine import reflection
 from sqlalchemy.sql import sqltypes
@@ -29,10 +29,10 @@ from ..constants import PYUNIPROT_DATA_DIR, PYUNIPROT_DIR
 
 if sys.version_info[0] == 3:
     from urllib.request import urlretrieve
-    from requests.compat import urlparse
+    from requests.compat import urlparse, urlsplit
 else:
     from urllib import urlretrieve
-    from urlparse import urlparse
+    from urlparse import urlparse, urlsplit
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +87,8 @@ class BaseDbManager(object):
 
         try:
             self.connection = get_connection_string(connection)
-            self.engine = create_engine(self.connection, echo=echo)
+            self.engine = sqlalchemy.create_engine(self.connection, echo=echo)
+
             self.inspector = reflection.Inspector.from_engine(self.engine)
             self.sessionmaker = sessionmaker(
                 bind=self.engine,
@@ -118,7 +119,6 @@ class BaseDbManager(object):
 
 
 class DbManager(BaseDbManager):
-    pyuniprot_data_dir = PYUNIPROT_DATA_DIR
     pmids = set()
     keywords = {}
     subcellular_locations = {}
@@ -154,17 +154,40 @@ class DbManager(BaseDbManager):
         log.info('Update CTD database from {}'.format(url))
 
         self._drop_tables()
-        xml_gzipped_file_path = self.download(url, force_download)
+        xml_gzipped_file_path, version_file_path = self.download(url, force_download)
         self._create_tables()
+        self.import_version(version_file_path)
         self.import_xml(xml_gzipped_file_path, taxids, silent)
         self.session.close()
+
+    def import_version(self, version_file_path):
+        pattern = "UniProtKB/(?P<knowledgebase>Swiss-Prot|TrEMBL) Release" \
+                  " (?P<release_name>\\d{4}_\\d{2}) of (?P<release_date>\\d{2}-\\w{3}-\\d{4})"
+        with open(version_file_path) as fd:
+            content = fd.read()
+
+        for knowledgebase, release_name, release_date_str in re.findall(pattern, content):
+            release_date = datetime.strptime(release_date_str, '%d-%b-%Y')
+
+            version = models.Version(
+                knowledgebase=knowledgebase,
+                release_name=release_name,
+                release_date=release_date
+            )
+
+            self.session.add(version)
+
+        self.session.commit()
 
     def import_xml(self, xml_gzipped_file_path, taxids, silent=False):
         """Imports XML
 
         :param str xml_gzipped_file_path: path to XML file
         :param int,(int,),[int,] taxids: NCBI taxonomy identifier
+        :param bool silent: no output if True
         """
+        version = self.session.query(models.Version).filter(models.Version.knowledgebase == 'Swiss-Prot').first()
+        version.import_start_date = datetime.now()
 
         entry_xml = '<entries>'
         number_of_entries = 0
@@ -210,6 +233,9 @@ class DbManager(BaseDbManager):
                         else:
                             entry_xml = "<entries>"
                             number_of_entries = 0
+
+        version.import_completed_date = datetime.now()
+        self.session.commit()
 
     def insert_entries(self, entries_xml, taxids):
         """
@@ -690,25 +716,47 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_dtypes(cls, sqlalchemy_model):
-        mapper = inspect(sqlalchemy_model)
+        mapper = sqlalchemy.inspect(sqlalchemy_model)
         dtypes = {x.key: alchemy_pandas_dytpe_mapper[type(x.type)] for x in mapper.columns if x.key != 'id'}
         return dtypes
 
     @classmethod
     def download(cls, url=None, force_download=False):
-        """Downloads uniprot_sprot.xml.gz from URL
+        """Downloads uniprot_sprot.xml.gz and reldate.txt (release date information) from URL or file path
+
+        .. note::
+
+            only URL/path of xml.gz is needed and valid value for parameter url. URL/path for reldate.txt have to be the
+            same folder
     
-        :param url: UniProt gzipped URL
-        :type url: string
+        :param str url: UniProt gzipped URL or file path
         :param force_download: force method to download
         :type force_download: bool
         """
-        url = url if url else defaults.XML_SPROT_URL
-        file_path = cls.get_path_to_file_from_url(url)
-        if force_download or not os.path.exists(file_path):
-            log.info('download {}'.format(file_path))
-            urlretrieve(url, file_path)
-        return file_path
+        if url:
+            version_url = os.path.join(os.path.dirname(url), defaults.VERSION_FILE_NAME)
+        else:
+            url = os.path.join(defaults.XML_DIR_NAME, defaults.XML_FILE_NAME)
+            version_url = os.path.join(defaults.XML_DIR_NAME, defaults.VERSION_FILE_NAME)
+
+        xml_file_path = cls.get_path_to_file_from_url(url)
+        version_file_path = cls.get_path_to_file_from_url(version_url)
+
+        if force_download or not os.path.exists(xml_file_path):
+
+            log.info('download {} and {}'.format(xml_file_path, version_file_path))
+
+            scheme = urlsplit(url).scheme
+
+            if scheme in ('ftp', 'http'):
+                urlretrieve(version_url, version_file_path)
+                urlretrieve(url, xml_file_path)
+
+            elif not scheme and os.path.isfile(url):
+                shutil.copyfile(url, xml_file_path)
+                shutil.copyfile(version_url, version_file_path)
+
+        return xml_file_path, version_file_path
 
     @classmethod
     def get_path_to_file_from_url(cls, url):
@@ -717,7 +765,7 @@ class DbManager(BaseDbManager):
         :param str url: download URL
         """
         file_name = urlparse(url).path.split('/')[-1]
-        return os.path.join(cls.pyuniprot_data_dir, file_name)
+        return os.path.join(PYUNIPROT_DATA_DIR, file_name)
 
     def export_obo(self, path_to_export_file, name_of_ontology="uniprot", taxids=None):
         """

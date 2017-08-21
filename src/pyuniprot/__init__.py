@@ -30,4 +30,5 @@ __author__ = 'Christian Ebeling'
 __email__ = 'christian.ebeling@scai.fraunhofer.de'
 
 __license__ = 'Apache 2.0 License'
-__copyright__ = 'Copyright (c) 2017 Christian Ebeling, Fraunhofer Institute for Algorithms and Scientific Computing SCAI, Schloss Birlinghoven, 53754 Sankt Augustin, Germany'
+__copyright__ = 'Copyright (c) 2017 Christian Ebeling, Fraunhofer Institute for Algorithms and Scientific Computing ' \
+                'SCAI, Schloss Birlinghoven, 53754 Sankt Augustin, Germany'

@@ -11,16 +11,18 @@ Oberview
 """
 import inspect
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, Table
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, Table, DateTime
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
 
 from .defaults import TABLE_PREFIX
 
+from datetime import datetime
+
 Base = declarative_base()
 
 
-def to_dict(inst):
+def to_dict_old(inst):
     """
     Converts a SQLAlchemy model instance in a dictionary
     """
@@ -78,7 +80,9 @@ class MasterModel(object):
     id = Column(Integer, primary_key=True)
 
     def to_json(self):
-        return to_dict(self)
+        data_dict = self.__dict__.copy()
+        del data_dict['_sa_instance_state']
+        return data_dict
 
 entry_pmid = get_many2many_table('entry', 'pmid')
 
@@ -314,6 +318,28 @@ class Sequence(Base, MasterModel):
 
     def __repr__(self):
         return self.sequence
+
+
+class Version(Base, MasterModel):
+    """Version information about UniProt knowledgebase
+
+    :cvar str knowledgebase_type: Swiss-Prot or TrEMBL
+    :cvar datetime release_date: date of release
+    """
+    @property
+    def data(self):
+        data = self.__dict__.copy()
+        del data
+        return data
+
+    knowledgebase = Column(String(255), unique=True)
+    release_name = Column(String(255))
+    release_date = Column(Date)
+    import_start_date = Column(DateTime)
+    import_completed_date = Column(DateTime)
+
+    def __repr__(self):
+        return "{}:{}:{}".format(self.knowledgebase, self.release_name,  self.release_date.strftime('%Y-%m-%d'))
 
 
 class Disease(Base, MasterModel):
