@@ -7,7 +7,6 @@ import gzip
 import configparser
 import time
 import re
-import subprocess
 import shutil
 import sqlalchemy
 
@@ -30,9 +29,11 @@ from ..constants import PYUNIPROT_DATA_DIR, PYUNIPROT_DIR
 if sys.version_info[0] == 3:
     from urllib.request import urlretrieve
     from requests.compat import urlparse, urlsplit
+    from subprocess import getoutput
 else:
     from urllib import urlretrieve
     from urlparse import urlparse, urlsplit
+    from commands import getoutput
 
 log = logging.getLogger(__name__)
 
@@ -194,12 +195,13 @@ class DbManager(BaseDbManager):
         interval = 1000
         start = False
 
-        if sys.platform in ('linux', 'darwin'):
+        if sys.platform in ('linux', 'linux2', 'darwin'):
             log.info('Load gzipped XML from {}'.format(xml_gzipped_file_path))
-            number_of_lines = int(subprocess.getoutput("zcat {} | wc -l".format(xml_gzipped_file_path)))
+            number_of_lines = int(getoutput("zcat {} | wc -l".format(xml_gzipped_file_path)))
             tqdm_desc = 'Imported from {} lines'.format(number_of_lines)
 
         else:
+            print('bin was anderes')
             number_of_lines = None
             tqdm_desc = None
 
