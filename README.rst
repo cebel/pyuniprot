@@ -176,16 +176,16 @@ There are two options to import the data:
 
 1. Command line import
 
-.. code-block:: sh
+    .. code-block:: sh
 
-    pyuniprot update --taxids 9606,10090,10116
+        pyuniprot update --taxids 9606,10090,10116
 
 2. Python
 
-.. code-block:: python
+    .. code-block:: python
 
-    import pyuniprot
-    pyuniprot.update(taxids=[9606, 10090, 10116])
+        import pyuniprot
+        pyuniprot.update(taxids=[9606, 10090, 10116])
 
 We only recommend to import the whole UniProt dataset if you don't want to restrict your search. Import with no
 restrictions will take several hours and take a lot of disk space.
