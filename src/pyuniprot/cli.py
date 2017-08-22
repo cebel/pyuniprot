@@ -25,9 +25,9 @@ def test_connection(conn_str):
         conn = create_engine(conn_str)
         conn.connect()
         del conn
-        click.secho('Connection was sucessfully', fg='green')
+        click.secho('Connection was successful', fg='green')
     except:
-        click.secho('Test was NOT sucessfully', fg='black', bg='red')
+        click.secho('Test was NOT successful', fg='black', bg='red')
         click.echo("\n")
         click.secho('Please use one of the following connection schemas', fg='black', bg='green')
         click.secho('\n\n'.join(hint_connection_string))

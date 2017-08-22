@@ -738,7 +738,7 @@ class DbManager(BaseDbManager):
         if url:
             version_url = os.path.join(os.path.dirname(url), defaults.VERSION_FILE_NAME)
         else:
-            url = os.path.join(defaults.XML_DIR_NAME, defaults.XML_FILE_NAME)
+            url = os.path.join(defaults.XML_DIR_NAME, defaults.SWISSPROT_FILE_NAME)
             version_url = os.path.join(defaults.XML_DIR_NAME, defaults.VERSION_FILE_NAME)
 
         xml_file_path = cls.get_path_to_file_from_url(url)

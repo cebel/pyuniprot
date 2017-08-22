@@ -75,7 +75,8 @@ SQLite
     - have no possibility to use RDMSs like MySQL/MariaDB
     - just test PyUniProt, but don't want to spend time in setting up a database
 
-    skip the next *MySQL/MariaDB setup* section. But in general we recommend MySQL or MariaDB as your RDBMS.
+    skip the next *MySQL/MariaDB setup* section. But in general we strongly recommend MySQL or MariaDB as your
+    relational database management system.
 
 If you don't know what all that means skip the section *MySQL/MariaDB setup*.
 
@@ -94,7 +95,55 @@ Log in MySQL as root user and create a new database, create a user, assign the r
     GRANT ALL PRIVILEGES ON pyuniprot.* TO 'pyuniprot_user'@'%' IDENTIFIED BY 'pyuniprot_passwd';
     FLUSH PRIVILEGES;
 
-Start a python shell and set the MySQL configuration. If you have not changed anything in the SQL statements ...
+There are two options to set the MySQL/MariaDB.
+
+1. The simplest is to start the command line tool
+
+.. code-block:: sh
+
+    pyuniprot mysql
+
+You will be guided with input prompts. Accept the default value in squared brackets with RETURN. You will see
+something like this
+
+.. code-block:: sh
+
+    server name/ IP address database is hosted [localhost]:
+    MySQL/MariaDB user [pyuniprot_user]:
+    MySQL/MariaDB password [pyuniprot_passwd]:
+    database name [pyuniprot]:
+    character set [utf8]:
+
+Connection will be tested and in case of success return `Connection was successful`.
+Otherwise you will see following hinte
+
+.. code-block:: sh
+
+    Test was NOT successful
+
+    Please use one of the following connection schemas
+    MySQL/MariaDB (strongly recommended):
+            mysql+pymysql://user:passwd@localhost/database?charset=utf8
+
+    PostgreSQL:
+            postgresql://user:passwd@localhost/database
+
+    MsSQL (pyodbc needed):
+            mssql+pyodbc://user:passwd@database
+
+    SQLite (always works):
+
+    - Linux:
+            sqlite:////absolute/path/to/database.db
+
+    - Windows:
+            sqlite:///C:\absolute\path\to\database.db
+
+    Oracle:
+            oracle://user:passwd@localhost:1521/database
+
+2. The second option is to start a python shell and set the MySQL configuration.
+If you have not changed anything in the SQL statements above ...
 
 .. code-block:: python
 
@@ -106,7 +155,6 @@ If you have used you own settings, please adapt the following command to you req
 .. code-block:: python
 
     import pyuniprot
-    pyuniprot.set_mysql_connection()
     pyuniprot.set_mysql_connection(host='localhost', user='pyuniprot_user', passwd='pyuniprot_passwd', db='pyuniprot')
 
 Updating
@@ -117,32 +165,45 @@ The updating process will download the *uniprot_sprot.xml.gz* file provided by t
 .. warning::
 
     Please note that UniProt download file needs ~700 Mb of disk space and the update takes ~2h only for
-    human, mouse and rat (depending on your system)
+    human, mouse and rat (depending on your computer)
 
 It is strongly recommended to restrict the entries liked to specific organisms your are interested in by parsing a list
 of NCBI Taxonomy IDs to the parameter `taxids`. To identify correct NCBI Taxonomy IDs please go to
 `NCBI Taxonomy web form <https://www.ncbi.nlm.nih.gov/taxonomy/>`_. In the following example we use 9606 as identifier
 for Homo sapiens, 10090 for Mus musculus and 10116 for Rattus norvegicus.
 
+There are two options to import the data:
+
+1. Command line import
+
+.. code-block:: sh
+
+    pyuniprot update --taxids 9606,10090,10116
+
+2. Python
+
 .. code-block:: python
 
     import pyuniprot
     pyuniprot.update(taxids=[9606, 10090, 10116])
+
+We only recommend to import the whole UniProt dataset if you don't want to restrict your search. Import with no
+restrictions will take several hours and take a lot of disk space.
 
 If you want to load all UniProt entries in the database:
 
 .. code-block:: python
 
     import pyuniprot
-    pyuniprot.update()
+    pyuniprot.update() # not recommended, please read the notes above
 
-The update uses the download if it still exists on you system (~/.pyuniprot/data/uniprot_sprot.xml.gz). If you use
+The update uses the download file if it still exists on you system (~/.pyuniprot/data/uniprot_sprot.xml.gz). If you use
 the parameter `force_download` the current file from UniProt will be downloaded.
 
 .. code-block:: python
 
     import pyuniprot
-    pyuniprot.update(force_download=True)
+    pyuniprot.update(force_download=True, taxids=[9606, 10090, 10116])
 
 Quick start with query functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

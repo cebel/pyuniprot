@@ -1,6 +1,6 @@
 PyUniProt Documentation
 =======================
-for version: |version|
+for version: |release|
 
 
 :code:`PyUniProt` is python software interface developed by the
