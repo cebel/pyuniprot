@@ -9,15 +9,11 @@ Oberview
 .. image:: _static/models/all.png
     :target: _images/all.png
 """
-import inspect
-
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, Table, DateTime
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
 
 from .defaults import TABLE_PREFIX
-
-from datetime import datetime
 
 Base = declarative_base()
 

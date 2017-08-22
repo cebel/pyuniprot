@@ -6,8 +6,7 @@ PyUniProt |stable_build|
 |stable_documentation| |pypi_license|
 
 `PyUniProt <http://pyUniProt.readthedocs.io>`_ is a Python package
-to access and query chemical–gene/protein interactions, chemical–disease and gene–disease
-relationships by data provided by the European Bioinformatics Institute (EMBL-EBI),
+to access and query UniProt data provided by the European Bioinformatics Institute (EMBL-EBI),
 the SIB Swiss Institute of Bioinformatics and the Protein Information Resource (PIR).
 
 Data are installed in a (local or remote) RDBMS enabling bioinformatic algorithms very fast response times

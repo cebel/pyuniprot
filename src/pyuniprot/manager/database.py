@@ -197,7 +197,11 @@ class DbManager(BaseDbManager):
 
         if sys.platform in ('linux', 'linux2', 'darwin'):
             log.info('Load gzipped XML from {}'.format(xml_gzipped_file_path))
-            number_of_lines = int(getoutput("zcat {} | wc -l".format(xml_gzipped_file_path)))
+
+            zcat_command = 'gzcat' if sys.platform == 'darwin' else 'zcat'
+
+            number_of_lines = int(getoutput("{} {} | wc -l".format(zcat_command, xml_gzipped_file_path)))
+
             tqdm_desc = 'Imported from {} lines'.format(number_of_lines)
 
         else:
