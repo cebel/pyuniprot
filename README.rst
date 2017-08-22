@@ -312,7 +312,7 @@ PyUniProt
     :target: https://www.scai.fraunhofer.de/en/business-research-areas/bioinformatics.html
     :alt: SCAI project logo
 
-.. |er_model| image:: https://owncloud.scai.fraunhofer.de/index.php/apps/files_sharing/ajax/publicpreview.php?x=1920&y=562&a=true&file=pyuniprot_er_model.png&t=QUm8KPPnNGoH8wp&scalingup=0
+.. |er_model| image:: https://owncloud.scai.fraunhofer.de/index.php/apps/files_sharing/ajax/publicpreview.php?x=1921&y=445&a=true&file=all.png&t=6d3ZxWeBX6Jndgu&scalingup=0
     :target: http://pyuniprot.readthedocs.io/en/latest/
     :alt: Entity relationship model
 
