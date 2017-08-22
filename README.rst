@@ -278,21 +278,21 @@ PyUniProt
 - Distributed by `PyPI <https://pypi.python.org/pypi/pyuniprot>`_
 - Chat on `Gitter <https://gitter.im/pyuniprot/Lobby>`_
 
-.. |stable_build| image:: https://travis-ci.org/cebel/pyUniProt.svg?branch=master
+.. |stable_build| image:: https://api.travis-ci.org/cebel/pyuniprot.svg?branch=master
     :target: https://travis-ci.org/cebel/pyuniprot
     :alt: Stable Build Status
 
-.. |stable_documentation| image:: https://readthedocs.org/projects/pyUniProt/badge/?version=latest
+.. |stable_documentation| image:: https://readthedocs.org/projects/pyuniprot/badge/?version=latest
     :target: http://pyuniprot.readthedocs.io/en/latest/
     :alt: Development Documentation Status
 
-.. |pypi_license| image:: https://img.shields.io/pypi/l/PyUniProt.svg
+.. |pypi_license| image:: https://img.shields.io/pypi/l/pyuniprot.svg
     :alt: Apache 2.0 License
 
-.. |python_versions| image:: https://img.shields.io/pypi/pyversions/PyUniProt.svg
+.. |python_versions| image:: https://img.shields.io/pypi/pyversions/pyuniprot.svg
     :alt: Stable Supported Python Versions
 
-.. |pypi_version| image:: https://img.shields.io/pypi/v/PyUniProt.svg
+.. |pypi_version| image:: https://img.shields.io/pypi/v/pyuniprot.svg
     :alt: Current version on PyPI
 
 .. |phago_logo| image:: https://raw.githubusercontent.com/cebel/pyuniprot/master/docs/source/_static/logos/phago_logo.jpeg
