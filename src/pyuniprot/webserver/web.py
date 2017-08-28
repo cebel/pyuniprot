@@ -8,7 +8,7 @@ from ..manager.query import QueryManager
 
 app = Flask(__name__)
 
-app.debug = True
+app.debug = False
 
 app.config.setdefault('SWAGGER', {
     'title': 'PyUniProt Web API',
@@ -342,23 +342,18 @@ def query_entry():
         required: false
         default: 1
     """
-    args = {}
+    allowed_str_args = ['dataset', 'name', 'recommended_full_name', 'feature_type', 'disease_name',
+                        'recommended_short_name', 'gene_name', 'sequence', 'accession', 'organism_host',
+                        'feature_type', 'function_', 'ec_number', 'db_reference', 'alternative_full_name',
+                        'alternative_short_name', 'disease_comment', 'tissue_specificity', 'other_gene_name']
 
-    if request.method == 'GET':
+    allowed_int_args = ['taxid', 'limit', 'id', 'pmids']
 
-        allowed_str_args = ['dataset', 'name', 'recommended_full_name', 'feature_type', 'disease_name',
-                            'recommended_short_name', 'gene_name', 'sequence', 'accession', 'organism_host',
-                            'feature_type', 'function_', 'ec_number', 'db_reference', 'alternative_full_name',
-                            'alternative_short_name', 'disease_comment', 'tissue_specificity', 'other_gene_name']
-
-        allowed_int_args = ['taxid', 'limit', 'id', 'pmids']
-
-        args = get_args(
-            request_args=request.args,
-            allowed_int_args=allowed_int_args,
-            allowed_str_args=allowed_str_args
-        )
-        print(args)
+    args = get_args(
+        request_args=request.args,
+        allowed_int_args=allowed_int_args,
+        allowed_str_args=allowed_str_args
+    )
 
     return jsonify(query.entry(**args))
 
@@ -424,16 +419,12 @@ def query_disease():
         description: limit of results numbers
         default: 10
     """
-    args = {}
+    allowed_str_args = ['identifier', 'ref_id', 'ref_type', 'name', 'acronym', 'description']
 
-    if request.method == 'GET':
-
-        allowed_str_args = ['identifier', 'ref_id', 'ref_type', 'name', 'acronym', 'description']
-
-        args = get_args(
-            request_args=request.args,
-            allowed_str_args=allowed_str_args
-        )
+    args = get_args(
+        request_args=request.args,
+        allowed_str_args=allowed_str_args
+    )
 
     return jsonify(query.disease(**args))
 

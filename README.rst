@@ -250,7 +250,8 @@ As dataframe with a limit of 10 and accession number starts with Q9 (% used as w
     1  32    Q9GIK8         6
     2  33    Q9TQB4         6
 
-
+Full documentation on query function you will find
+`here <http://pyuniprot.readthedocs.io/en/latest/query_functions.html>`_
 
 More information
 ----------------

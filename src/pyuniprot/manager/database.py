@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""PyCTD loads all CTD content in the database. Content is available via functions."""
+"""PyUniProt loads all CTD content in the database. Content is available via query functions."""
 import logging
 import os
 import sys
@@ -133,7 +133,6 @@ class DbManager(BaseDbManager):
         :type connection: str
         """
         super(DbManager, self).__init__(connection=connection)
-        self.parser = None
 
     def db_import_xml(self, url=None, force_download=False, taxids=None, silent=False):
         """Updates the CTD database
@@ -202,7 +201,7 @@ class DbManager(BaseDbManager):
 
             number_of_lines = int(getoutput("{} {} | wc -l".format(zcat_command, xml_gzipped_file_path)))
 
-            tqdm_desc = 'Imported from {} lines'.format(number_of_lines)
+            tqdm_desc = 'Import {} lines'.format(number_of_lines)
 
         else:
             print('bin was anderes')

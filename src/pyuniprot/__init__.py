@@ -2,7 +2,7 @@
 
 PyUniProt is tested on both Python2.7 and Python3
 
-.. warning:: PyCTD is not thoroughly tested on Windows.
+.. warning:: PyUniProt is not thoroughly tested on Windows.
 
 Installation
 ------------

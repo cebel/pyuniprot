@@ -15,8 +15,8 @@ class QueryManager(BaseDbManager):
 
         :param bool as_df: if is set to True results return as pandas.DataFrame
         :param `sqlalchemy.orm.query.Query` query: SQL Alchemy query 
-        :param int,tuple limit: maximum number of results
-        :return: query result of pyctd.manager.models.XY objects
+        :param int or tuple[int] limit: maximum number of results
+        :return: query result of pyuniprot.manager.models.XY objects
         """
         if limit:
 
@@ -133,18 +133,30 @@ class QueryManager(BaseDbManager):
         return query_obj
 
     def keyword(self, name=None, identifier=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Pmid`
+        """Method to query :class:`.models.Keyword` objects in database
 
-        .. seealso::
+        :param name: keyword name(s)
+        :type name: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.Keyword`
+        :param identifier: keyword identifier(s)
+        :type identifier: str or tuple(str) or None
 
-        :param str name: keyword name
-        :param str identifier: keyword identifier
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type identifier: str or tuple(str) or None
+
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Keyword` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Keyword`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Keyword`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Keyword)
 
@@ -182,39 +194,85 @@ class QueryManager(BaseDbManager):
               sequence=None,
               limit=None,
               as_df=False):
-        """Method to query :class:`pyuniprot.manager.Entry`
+        """Method to query :class:`.models.Entry` objects in database
 
         An entry is the root element in UniProt datasets. Everything is linked to entry and can be accessed from
-        :param dataset:
-        :class:`models.Entry` object. `%` can be used as wildcard for string parameters (see examples below).
 
-        .. seealso::
+        :param name: UniProt entry name(s)
+        :type name: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.Entry`
+        :param dataset: Swiss-Prot or TrEMBL
+        :type name: str or tuple(str) or None
 
-        :param str,tuple name: UniProt entry name(s)
-        :param str,tuple recommended_full_name: recommended full protein name(s)
-        :param str,tuple recommended_short_name: recommended short protein name(s)
-        :param str,tuple tissue_in_reference: tissue mentioned in reference
-        :param str,tuple subcellular_location: subcellular location(s)
-        :param str,tuple keyword: keyword
-        :param str,tuple pmid: PubMed identifier
-        :param str,tuple tissue_specificity: tissue specificities
-        :param str,tuple disease_comment: disease_comments
-        :param str,tuple alternative_name:
-        :param str,tuple db_reference: cross reference identifier
-        :param str,tuple ec_number: enzyme classification number, e.g. 1.1.1.1
-        :param str,tuple function_: description of protein functions
-        :param str,tuple feature_type: feature types
-        :param str,tuple organism_host: organism hosts
-        :param str,tuple accession: UniProt accession number
-        :param str,tuple disease_name: disease name
-        :param str,tuple gene_name: gene name
-        :param str,tuple taxid: NCBI taxonomy identifier
-        :param int,tuple limit: maximum number of results
-        :param str,tuple sequence: Amino acid sequence
-        :param bool as_df: if set to True result returns as `pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Entry` objects or :class:`pandas.DataFrame`
+        :param recommended_full_name: recommended full protein name(s)
+        :type recommended_full_name: str or tuple(str) or None
+
+        :param recommended_short_name: recommended short protein name(s)
+        :type recommended_short_name: str or tuple(str) or None
+
+        :param tissue_in_reference: tissue(s) mentioned in reference
+        :type tissue_in_reference: str or tuple(str) or None
+
+        :param subcellular_location: subcellular location(s)
+        :type subcellular_location: str or tuple(str) or None
+
+        :param keyword: keyword(s)
+        :type keyword: str or tuple(str) or None
+
+        :param pmid: PubMed identifier(s)
+        :type pmid: int or tuple(int) or None
+
+        :param tissue_specificity: tissue specificit(y/ies)
+        :type tissue_specificity: str or tuple(str) or None
+
+        :param disease_comment: disease_comment(s)
+        :type disease_comment: str or tuple(str) or None
+
+        :param alternative_name: alternative name(s)
+        :type alternative_name: str or tuple(str) or None
+
+        :param db_reference: cross reference identifier(s)
+        :type db_reference: str or tuple(str) or None
+
+        :param ec_number: enzyme classification number(s), e.g. 1.1.1.1
+        :type ec_number: str or tuple(str) or None
+
+        :param function_: description of protein function(s)
+        :type function_: str or tuple(str) or None
+
+        :param feature_type: feature type(s)
+        :type feature_type: str or tuple(str) or None
+
+        :param organism_host: organism host(s) as taxid(s)
+        :type organism_host: int or tuple(int) or None
+
+        :param accession: UniProt accession number(s)
+        :type accession: str or tuple(str) or None
+
+        :param disease_name: disease name(s)
+        :type disease_name: str or tuple(str) or None
+
+        :param gene_name: gene name(s)
+        :type gene_name: str or tuple(str) or None
+
+        :param taxid: NCBI taxonomy identifier(s)
+        :type taxid: int or tuple(int) or None
+
+        :param sequence: Amino acid sequence(s)
+        :type sequence: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
+        :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Entry`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Entry`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Entry)
 
@@ -270,22 +328,42 @@ class QueryManager(BaseDbManager):
                 limit=None,
                 as_df=False
                 ):
-        """Method to query :class:`pyuniprot.manager.models.Disease`
+        """Method to query :class:`.models.Disease` objects in database
 
-        .. seealso::
 
-            :class:`pyuniprot.manager.models.Disease`
+        :param identifier: disease UniProt identifier(s)
+        :type identifier: str or tuple(str) or None
 
-        :param identifier: disease UniProt identifier
-        :param ref_id: identifier of referenced database
-        :param ref_type: database name
-        :param name: disease name
-        :param acronym: disease acronym
-        :param description: disease description
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param ref_id: identifier(s) of referenced database
+        :type ref_id: str or tuple(str) or None
+
+        :param ref_type: database name(s)
+        :type ref_type: str or tuple(str) or None
+
+        :param name: disease name(s)
+        :type name: str or tuple(str) or None
+
+        :param acronym: disease acronym(s)
+        :type acronym: str or tuple(str) or None
+
+        :param description: disease description(s)
+        :type description: str or tuple(str) or None
+
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Disease` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Disease`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Disease`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Disease)
 
@@ -309,17 +387,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def disease_comment(self, comment=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.models.DiseaseComment`
+        """Method to query :class:`.models.DiseaseComment` objects in database
 
-        .. seealso::
+        :param comment: Comment(s) to disease
+        :type comment: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.DiseaseComment`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param comment: Comment to disease
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: Number of results, if limit=`None`, all results returned
-        :param bool as_df: If `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.DiseaseComment` objects or :class:`pandas.DataFrame`
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
+        :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.DiseaseComment`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.DiseaseComment`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.DiseaseComment)
 
@@ -330,18 +417,30 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def other_gene_name(self, type_=None, name=None, entry_name=None, limit=None, as_df=None):
-        """Method to query :class:`pyuniprot.manager.OtherGeneName`
+        """Method to query :class:`.models.OtherGeneName` objects in database
 
-        .. seealso::
+        :param type_: type(s) of gene name e.g. *synonym*
+        :type type_: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.OtherGeneName`
+        :param name: other gene name(s)
+        :type name: str or tuple(str) or None
 
-        :param str type_: type of gene name e.g. *synonym*
-        :param str name: other gene name
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: Number of results, if limit=`None`, all results returned
-        :param bool as_df: If `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.DiseaseComment` objects or :class:`pandas.DataFrame`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
+        :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.OtherGeneName`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.OtherGeneName`) or :class:`pandas.DataFrame`
+
         """
         q = self.session.query(models.OtherGeneName)
 
@@ -356,17 +455,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def alternative_full_name(self, name=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.AlternativeFullName`
+        """Method to query :class:`.models.AlternativeFullName` objects in database
 
-        .. seealso::
+        :param name: alternative full name(s)
+        :type name: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.AlternativeFullName`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param str name: alternative full name
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.AlternativeFullName` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.AlternativeFullName`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.AlternativeFullName`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.AlternativeFullName)
 
@@ -380,13 +488,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def alternative_short_name(self, name=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.AlternativeShortlName`
+        """Method to query :class:`.models.AlternativeShortlName` objects in database
 
-        :param str name: alternative short name
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param name: alternative short name(s)
+        :type name: str or tuple(str) or None
+
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.AlternativeShortName` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.AlternativeShortName`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.AlternativeShortName`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.AlternativeShortName)
 
@@ -400,13 +521,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def accession(self, accession=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Accession`
+        """Method to query :class:`.models.Accession` objects in database
 
-        :param str accession: UniProt Accession number
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param accession: UniProt Accession number(s)
+        :type accession: str or tuple(str) or None
+
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Accession` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Accession`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Accession`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Accession)
 
@@ -431,23 +565,44 @@ class QueryManager(BaseDbManager):
              limit=None,
              as_df=False
              ):
-        """Method to query :class:`pyuniprot.manager.Pmid`
+        """Method to query :class:`.models.Pmid` objects in database
 
-        .. seealso::
+        :param pmid: PubMed identifier(s)
+        :type pmid: int or tuple(int) or None
 
-            :class:`pyuniprot.manager.models.Pmid`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param int pmid: PubMed identifier
-        :param str entry_name: name in :class:`.models.Entry`
-        :param first: first page
-        :param last: last page
-        :param volume: volume
-        :param name: name of journal
-        :param date: publication date
-        :param title: title of publication
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param first: first page(s)
+        :type first: str or tuple(str) or None
+
+        :param last: last page(s)
+        :type last: str or tuple(str) or None
+
+        :param volume: volume(s)
+        :type volume: int or tuple(int) or None
+
+        :param name: name(s) of journal
+        :type name: str or tuple(str) or None
+
+        :param date: publication year(s)
+        :type date: int or tuple(int) or None
+
+        :param title: title(s) of publication
+        :type title: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Pmid` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Pmid`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Pmid`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Pmid)
 
@@ -467,17 +622,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def organism_host(self, taxid=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.OrganismHost`
+        """Method to query :class:`.models.OrganismHost` objects in database
 
-        .. seealso::
+        :param taxid: NCBI taxonomy identifier(s)
+        :type taxid: int or tuple(int) or None
 
-            :class:`pyuniprot.manager.models.OrganismHost`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param taxid: NCBI taxonomy identifier
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.OrganismHostt` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.OrganismHost`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.OrganismHost`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.OrganismHost)
 
@@ -488,24 +652,35 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def db_reference(self, type_=None, identifier=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.models.DbReference`
+        """Method to query :class:`.models.DbReference` objects in database
 
         Check list of available databases with on :py:attr:`.dbreference_types`
 
-        .. seealso::
+        :param type_: type(s) (or name(s)) of database
+        :type type_: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.DbReference`
+        :param identifier: unique identifier(s) in specific database (type)
+        :type identifier: str or tuple(str) or None
 
-        :param type_: type (or name) of database
-        :param identifier: unique identifier in database
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.DbReference` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.DbReference`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.DbReference`) or :class:`pandas.DataFrame`
 
         **Links**
 
-        - `UniProt dbxref <http://www.uniprot.org/docs/dbxref>`_
+            - `UniProt dbxref <http://www.uniprot.org/docs/dbxref>`_
         """
         q = self.session.query(models.DbReference)
 
@@ -520,21 +695,34 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def feature(self, type_=None, identifier=None, description=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Feature`
+        """Method to query :class:`.models.Feature` objects in database
 
         Check available features types with ``pyuniprot.query().feature_types``
 
-        .. seealso::
+        :param type_: type(s) of feature
+        :type type_: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.Feature`
+        :param identifier: feature identifier(s)
+        :type identifier: str or tuple(str) or None
 
-        :param type_: type of feature
-        :param identifier: feature identifier
-        :param description: description of feature
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param description: description(s) of feature(s)
+        :type description: str or tuple(str) or None
+
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Feature` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Feature`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Feature`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Feature)
 
@@ -550,17 +738,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def function(self, text=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Function`
+        """Method to query :class:`.models.Function` objects in database
 
-        .. seealso::
+        :param text: description(s) of function(s)
+        :type text: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.Function`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param text: description of function
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.Function` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Function`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Function`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Function)
 
@@ -574,17 +771,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def ec_number(self, ec_number=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.ECNumber`
+        """Method to query :class:`.models.ECNumber` objects in database
 
-        .. seealso::
+        :param ec_number: Enzyme Commission number(s)
+        :type ec_number: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.ECNumber`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param ec_number: Enzyme Commission number
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.ECNumber` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.ECNumber`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.ECNumber`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.ECNumber)
 
@@ -595,17 +801,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def sequence(self, sequence=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.Sequence`
+        """Method to query :class:`.models.Sequence` objects in database
 
-        .. seealso::
+        :param sequence: AA sequence(s)
+        :type sequence: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.Sequence`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param sequence: AA sequence
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.SubcellularLocation` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.Sequence`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.Sequence`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.Sequence)
 
@@ -616,17 +831,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def subcellular_location(self, location=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.SubcellularLocation`
+        """Method to query :class:`.models.SubcellularLocation` objects in database
 
-        .. seealso::
+        :param location: subcellular location(s)
+        :type location: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.SubcellularLocation`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param location: subcellular location
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.SubcellularLocation` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.SubcellularLocation`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.SubcellularLocation`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.SubcellularLocation)
 
@@ -637,21 +861,30 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def tissue_specificity(self, comment=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.TissueSpecificity`
+        """Method to query :class:`.models.TissueSpecificity` objects in database
 
         Provides information on the expression of a gene at the mRNA or protein level in cells or in tissues of
         multicellular organisms. By default, the information is derived from experiments at the mRNA level, unless
         specified ‘at protein level
 
-        .. seealso::
+        :param comment: Comment(s) describing tissue specificity
+        :type comment: str or tuple(str) or None
 
-            :class:`pyuniprot.manager.models.TissueSpecificity`
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
 
-        :param str comment: Comment describing tissue specificity
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if `None`, all results returned
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`pyuniprot.manager.models.TissueSpecificity` objects or :class:`pandas.DataFrame`
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.TissueSpecificity`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.TissueSpecificity`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.TissueSpecificity)
 
@@ -662,14 +895,26 @@ class QueryManager(BaseDbManager):
         return self._limit_and_df(q, limit, as_df)
 
     def tissue_in_reference(self, tissue=None, entry_name=None, limit=None, as_df=False):
-        """Method to query :class:`pyuniprot.manager.TissueInReference`
+        """Method to query :class:`.models.TissueInReference` objects in database
 
-        :param str tissue: tissue linked to reference
-        :param str entry_name: name in :class:`.models.Entry`
-        :param int,tuple limit: number of results, if limit=`None`, all results returned
+        :param tissue: tissue(s) linked to reference
+        :type tissue: str or tuple(str) or None
+
+        :param entry_name: name(s) in :class:`.models.Entry`
+        :type entry_name: str or tuple(str) or None
+
+        :param limit:
+            - if `isinstance(limit,int)==True` -> limit
+            - if `isinstance(limit,tuple)==True` -> format:= tuple(page_number, results_per_page)
+            - if limit == None -> all results
+        :type limit: int or tuple(int) or None
+
         :param bool as_df: if `True` results are returned as :class:`pandas.DataFrame`
-        :return: list of :class:`models.TissueInReference` objects or :class:`pandas.DataFrame`
-        :rtype: [models.TissueInReference,] or [pandas.DataFrame]
+
+        :return:
+            - if `as_df == False` -> list(:class:`.models.TissueInReference`)
+            - if `as_df == True`  -> :class:`pandas.DataFrame`
+        :rtype: list(:class:`.models.TissueInReference`) or :class:`pandas.DataFrame`
         """
         q = self.session.query(models.TissueInReference)
 
@@ -684,79 +929,79 @@ class QueryManager(BaseDbManager):
 
     @property
     def dbreference_types(self):
-        """Distinct database reference types (``type_``) in :class:`pyuniprot.manager.models.DbReference`
+        """Distinct database reference types (``type_``) in :class:`.models.DbReference`
 
         :return: List of strings for all available database cross reference types used in model DbReference
-        :rtype: [str,]
+        :rtype: list[str]
         """
         q = self.session.query(distinct(models.DbReference.type_))
         return [x[0] for x in q.all()]
 
     @property
     def taxids(self):
-        """Distinct NCBI taxonomy identifiers (``taxid``) in :class:`pyuniprot.manager.models.Entry`
+        """Distinct NCBI taxonomy identifiers (``taxid``) in :class:`.models.Entry`
 
         :return: NCBI taxonomy identifiers
-        :rtype: [int,]
+        :rtype: list[int]
         """
         r = self.session.query(distinct(models.Entry.taxid)).all()
         return [x[0] for x in r]
 
     @property
     def datasets(self):
-        """Distinct datasets (``dataset``) in :class:`pyuniprot.manager.models.Entry`
+        """Distinct datasets (``dataset``) in :class:`.models.Entry`
 
         Distinct datasets are SwissProt or/and TrEMBL
 
         :return: all distinct dataset types
-        :rtype: [str,]
+        :rtype: list[str]
         """
         r = self.session.query(distinct(models.Entry.dataset)).all()
         return [x[0] for x in r]
 
     @property
     def feature_types(self):
-        """Distinct types (``type_``) in :class:`pyuniprot.manager.models.Feature`
+        """Distinct types (``type_``) in :class:`.models.Feature`
 
         :return: all distinct feature types
-        :rtype: [str,]
+        :rtype: list[str]
         """
         r = self.session.query(distinct(models.Feature.type_)).all()
         return [x[0] for x in r]
 
     @property
     def subcellular_locations(self):
-        """Distinct subcellular locations (``location`` in :class:`pyuniprot.manager.models.SubcellularLocation`)
+        """Distinct subcellular locations (``location`` in :class:`.models.SubcellularLocation`)
 
         :return: all distinct subcellular locations
-        :rtype: [str,]
+        :rtype: list[str]
         """
         return [x[0] for x in self.session.query(models.SubcellularLocation.location).all()]
 
     @property
     def tissues_in_references(self):
-        """Distinct tissues (``tissue`` in :class:`pyuniprot.manager.models.TissueInReference`)
+        """Distinct tissues (``tissue`` in :class:`.models.TissueInReference`)
 
         :return: all distinct tissues in references
-        :rtype: [str,]
+        :rtype: list[str]
         """
         return [x[0] for x in self.session.query(models.TissueInReference.tissue).all()]
 
     @property
     def keywords(self):
-        """Distinct keywords (``name`` in :class:`pyuniprot.manager.models.Keyword`)
+        """Distinct keywords (``name`` in :class:`.models.Keyword`)
 
         :returns: all distinct keywords
-        :rtype: [str,]
+        :rtype: list[str]
         """
         return [x[0] for x in self.session.query(models.Keyword.name).all()]
 
     @property
     def diseases(self):
-        """Distinct diseases (``name`` in :class:`pyuniprot.manager.models.Disease`)
+        """Distinct diseases (``name`` in :class:`.models.Disease`)
 
         :returns: all distinct disease names
-        :rtype: [str,]
+        :rtype: list[str]
         """
         return [x[0] for x in self.session.query(models.Disease.name).all()]
 

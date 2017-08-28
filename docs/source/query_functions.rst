@@ -188,7 +188,7 @@ other_gene_name
     import pyuniprot
     query = pyuniprot.query()
 
-    query.other_gene_name(entry_name='A4_HUMAN'))
+    query.other_gene_name(entry_name='A4_HUMAN')
 
 Check documentation of :func:`pyuniprot.manager.query.QueryManager.other_gene_name` for all available parameters.
 
@@ -211,7 +211,7 @@ alternative_short_name
     import pyuniprot
     query = pyuniprot.query()
 
-    query.alternative_short_name(name='Alzheimer disease amyloid protein', entry_name='A4_HUMAN')
+    query.alternative_short_name(entry_name='A4_HUMAN')
 
 Check documentation of :func:`pyuniprot.manager.query.QueryManager.alternative_short_name` for all
 available parameters.
@@ -248,7 +248,7 @@ organismHost
     query.organism_host(taxid=9606)
     # 0 results if you have only installed human
 
-Check documentation of :func:`pyuniprot.manager.query.QueryManager.organismHost` for all available parameters.
+Check documentation of :func:`pyuniprot.manager.query.QueryManager.organism_host` for all available parameters.
 
 dbReference
 -----------
@@ -259,7 +259,7 @@ dbReference
 
     query.db_reference(type_='EMBL', identifier='U20972')
 
-Check documentation of :func:`pyuniprot.manager.query.QueryManager.dbReference` for all available parameters.
+Check documentation of :func:`pyuniprot.manager.query.QueryManager.db_reference` for all available parameters.
 
 feature
 -------
