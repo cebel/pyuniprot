@@ -2,11 +2,13 @@ from flasgger import Swagger
 from functools import wraps
 from flask import Flask, jsonify, request, render_template, flash, redirect, url_for, session
 from passlib.hash import sha256_crypt
-from wtforms import Form, StringField, TextAreaField, PasswordField, validators
+from wtforms import Form, StringField, PasswordField, validators
+from flask_cors import CORS
 from ..manager.models import AppUser
 from ..manager.query import QueryManager
 
 app = Flask(__name__)
+CORS(app)
 
 app.debug = False
 

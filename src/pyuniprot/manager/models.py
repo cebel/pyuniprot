@@ -12,28 +12,11 @@ Oberview
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, Table, DateTime
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from .defaults import TABLE_PREFIX
 
 Base = declarative_base()
-
-
-def to_dict_old(inst):
-    """
-    Converts a SQLAlchemy model instance in a dictionary
-    """
-    convert = dict()
-    my_dict = dict()
-    for column in inst.__class__.__table__.columns:
-        value = getattr(inst, column.name)
-        if column.type in convert.keys():
-            try:
-                my_dict[column.name] = convert[column.type](value)
-            except:
-                my_dict[column.name] = "Error:  Failed to covert using ", str(convert[column.type])
-        else:
-            my_dict[column.name] = value
-    return my_dict
 
 
 def get_or_create(session, model, **kwargs):
@@ -76,8 +59,15 @@ class MasterModel(object):
     id = Column(Integer, primary_key=True)
 
     def to_json(self):
+        """method needed for flask.jsonify"""
+        return self.to_dict()
+
+    def to_dict(self):
         data_dict = self.__dict__.copy()
         del data_dict['_sa_instance_state']
+        for k, v in data_dict.items():
+            if isinstance(v, datetime.date):
+                data_dict[k] = data_dict[k].strftime('%Y-%m-%d')
         return data_dict
 
 entry_pmid = get_many2many_table('entry', 'pmid')
@@ -182,9 +172,6 @@ class Entry(Base, MasterModel):
         "TissueInReference",
         secondary=entry_tissue_in_reference,
         back_populates="entries")
-
-    def __repr__(self):
-        return self.recommended_full_name
 
     @property
     def data(self):
@@ -368,7 +355,7 @@ class Disease(Base, MasterModel):
     def entries(self):
         entry_set = set()
         for disease_comment in self.disease_comments:
-            entry_set |= set([disease_comment.entry])
+            entry_set |= {disease_comment.entry}
         return list(entry_set)
 
     @property

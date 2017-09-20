@@ -114,7 +114,7 @@ something like this
     character set [utf8]:
 
 Connection will be tested and in case of success return `Connection was successful`.
-Otherwise you will see following hinte
+Otherwise you will see following hint
 
 .. code-block:: sh
 
