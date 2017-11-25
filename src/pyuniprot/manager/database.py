@@ -141,15 +141,12 @@ class DbManager(BaseDbManager):
         4. import XML
         5. close session
 
-        :param taxids: list of NCBI taxonomy identifier
-        :type taxids: list
-        :param url: iterable of URL strings
-        :type url: str
-        :param force_download: force method to download
-        :type: bool
+        :param Optional[list[int]] taxids: list of NCBI taxonomy identifier
+        :param str url: iterable of URL strings
+        :param bool force_download: force method to download
+        :param bool silent:
         """
-
-        log.info('Update CTD database from {}'.format(url))
+        log.info('Update UniProt database from {}'.format(url))
 
         self._drop_tables()
         xml_gzipped_file_path, version_file_path = self.download(url, force_download)
@@ -177,11 +174,11 @@ class DbManager(BaseDbManager):
 
         self.session.commit()
 
-    def import_xml(self, xml_gzipped_file_path, taxids, silent=False):
+    def import_xml(self, xml_gzipped_file_path, taxids=None, silent=False):
         """Imports XML
 
         :param str xml_gzipped_file_path: path to XML file
-        :param int,(int,),[int,] taxids: NCBI taxonomy identifier
+        :param Optional[list[int]] taxids: NCBI taxonomy identifier
         :param bool silent: no output if True
         """
         version = self.session.query(models.Version).filter(models.Version.knowledgebase == 'Swiss-Prot').first()
@@ -240,13 +237,11 @@ class DbManager(BaseDbManager):
         version.import_completed_date = datetime.now()
         self.session.commit()
 
-    def insert_entries(self, entries_xml, taxids):
-        """
-        insert UniProt entries from XML
+    def insert_entries(self, entries_xml, taxids=None):
+        """Inserts UniProt entries from XML
 
         :param str entries_xml: XML string
-        :param int,tuple,list taxids: NCBI taxonomy IDs
-        :return:
+        :param Optional[list[int]] taxids: NCBI taxonomy IDs
         """
 
         entries = etree.fromstring(entries_xml)
@@ -264,12 +259,10 @@ class DbManager(BaseDbManager):
 
     # profile
     def insert_entry(self, entry, taxids):
-        """
-        insert UniProt entry"
+        """Insert UniProt entry"
 
         :param entry: XML node entry
-        :param taxids: int,tuple,list taxids: NCBI taxonomy IDs
-        :return:
+        :param taxids: Optional[iter[int]] taxids: NCBI taxonomy IDs
         """
         entry_dict = entry.attrib
         entry_dict['created'] = datetime.strptime(entry_dict['created'], '%Y-%m-%d')
@@ -616,11 +609,10 @@ class DbManager(BaseDbManager):
 
     @classmethod
     def get_taxid(cls, entry):
-        """
-        get NCBI taxonomy identifier from XML node entry
+        """Get NCBI taxonomy identifier from XML node entry
 
-        :param entry:X ML node entry
-        :return: int
+        :param entry: XML node entry
+        :rtype: int
         """
         query = "./organism/dbReference[@type='NCBI Taxonomy']"
         return int(entry.find(query).get('id'))
