@@ -120,19 +120,17 @@ class BaseDbManager(object):
 
 
 class DbManager(BaseDbManager):
+    """The DbManager implements all function to upload CTD files into the database. Prefered SQL Alchemy 
+    database is MySQL with pymysql.
+
+    :param connection: custom database connection SQL Alchemy string
+    :type connection: str
+    """
+    
     pmids = set()
     keywords = {}
     subcellular_locations = {}
     tissues = {}
-
-    def __init__(self, connection=None):
-        """The DbManager implements all function to upload CTD files into the database. Prefered SQL Alchemy 
-        database is MySQL with pymysql.
-        
-        :param connection: custom database connection SQL Alchemy string
-        :type connection: str
-        """
-        super(DbManager, self).__init__(connection=connection)
 
     def db_import_xml(self, url=None, force_download=False, taxids=None, silent=False):
         """Updates the CTD database
