@@ -5,3 +5,7 @@ The following have contributed to the development, maintenance, and testing of P
 Maintainer
 ----------
 `Christian Ebeling <https://github.com/cebel>`_
+
+Code Contributors
+-----------------
+- `Charles Tapley Hoyt <https://github.com/cthoyt/>`_
