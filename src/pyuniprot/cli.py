@@ -4,7 +4,6 @@ import click
 from sqlalchemy import create_engine
 
 from .manager import database
-from .webserver.web import get_app
 
 # try to follow advices on http://click.pocoo.org/5/
 
@@ -99,6 +98,7 @@ def version():
 @click.option('--port', type=int, help='Flask port. Defaults to 5000')
 def web(host, port):
     """Start web application"""
+    from .webserver.web import get_app
     get_app().run(host=host, port=port)
 
 
