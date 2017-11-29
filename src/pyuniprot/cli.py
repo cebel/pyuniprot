@@ -1,9 +1,10 @@
-import click
 import re
+
+import click
+from sqlalchemy import create_engine
 
 from .manager import database
 from .webserver.web import get_app
-from sqlalchemy import create_engine
 
 # try to follow advices on http://click.pocoo.org/5/
 
@@ -57,12 +58,12 @@ def obo(path, taxids=None):
 def update(taxids, conn, force_download, silent):
     """Update local UniProt database"""
     if not silent:
-        click.secho("WARNING: Update is very time consuming and can take several\n" \
-                  "hours depending which organisms you are importing!\n\n", fg="yellow")
+        click.secho("WARNING: Update is very time consuming and can take several "
+                    "hours depending which organisms you are importing!", fg="yellow")
 
         if not taxids:
-            click.echo("Please note that you can restrict import to organisms by\n" \
-                       " NCBI taxonomy IDs\n\n")
+            click.echo("Please note that you can restrict import to organisms by "
+                       "NCBI taxonomy IDs")
             click.echo("Example (human, mouse, rat):\n")
             click.secho("\tpyuniprot update --taxids 9606,10090,10116\n\n", fg="green")
 
