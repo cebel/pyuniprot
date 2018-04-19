@@ -194,9 +194,13 @@ class DbManager(BaseDbManager):
 
             zcat_command = 'gzcat' if sys.platform == 'darwin' else 'zcat'
 
-            number_of_lines = int(getoutput("{} {} | wc -l".format(zcat_command, xml_gzipped_file_path)))
-
-            tqdm_desc = 'Import {} lines'.format(number_of_lines)
+            try:
+                number_of_lines = int(getoutput("{} {} | wc -l".format(zcat_command, xml_gzipped_file_path)))
+                tqdm_desc = 'Import {} lines'.format(number_of_lines)
+            except ValueError:
+                log.exception('could not run getoutput. Unable to give estimate with tqdm')
+                number_of_lines = None
+                tqdm_desc = None
 
         else:
             print('bin was anderes')
