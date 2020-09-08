@@ -20,7 +20,8 @@ INSTALL_REQUIRES = [
     'flasgger',
     'passlib',
     'wtforms',
-    'configparser'
+    'configparser',
+    'lxml'
 ]
 
 if sys.version_info < (3,):

@@ -1,3 +1,5 @@
+lxml
+numpy
 sqlalchemy
 pandas
 pymysql

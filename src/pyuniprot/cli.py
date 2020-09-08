@@ -51,7 +51,7 @@ def obo(path, taxids=None):
 @click.option('-t', '--taxids', default=None, help='List of organisms imported by NCBI taxonomy IDs, '
                                                    'e.g. 9606,10090,10116 ')
 @click.option('-c', '--conn', default=None, help='connection string to database, e.g. {}'.format(example_conn))
-@click.option('-f ','--force_download', default=False, help="if is set latest version of UniProt will be downloaded",
+@click.option('-f ', '--force_download', default=False, help="if is set latest version of UniProt will be downloaded",
               is_flag=True)
 @click.option('-s', '--silent', help="True if want no output (e.g. cron job)", is_flag=True)
 def update(taxids, conn, force_download, silent):

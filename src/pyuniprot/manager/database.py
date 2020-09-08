@@ -1,39 +1,39 @@
 # -*- coding: utf-8 -*-
 """PyUniProt loads all CTD content in the database. Content is available via query functions."""
+import configparser
+import gzip
 import logging
 import os
-import sys
-import gzip
-import configparser
-import time
 import re
 import shutil
-import sqlalchemy
+import sys
+import time
+import lxml
+
+from configparser import RawConfigParser
+from datetime import datetime
+from typing import Iterable
 
 import numpy as np
-import xml.etree.cElementTree as etree
+
+import sqlalchemy
+from sqlalchemy.engine import reflection
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.sql import sqltypes
 
 from tqdm import tqdm
-from datetime import datetime
-from configparser import RawConfigParser
-
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.engine import reflection
-from sqlalchemy.sql import sqltypes
+from lxml.etree import iterparse
 
 from . import defaults
 from . import models
 from ..constants import PYUNIPROT_DATA_DIR, PYUNIPROT_DIR
 
-
 if sys.version_info[0] == 3:
     from urllib.request import urlretrieve
     from requests.compat import urlparse, urlsplit
-    from subprocess import getoutput
 else:
     from urllib import urlretrieve
     from urlparse import urlparse, urlsplit
-    from commands import getoutput
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +43,11 @@ alchemy_pandas_dytpe_mapper = {
     sqltypes.Integer: np.float,
     sqltypes.REAL: np.double
 }
+
+LxmlElement = lxml.etree._Element
+
+XN_URL = 'http://uniprot.org/uniprot'
+XN = {'n': XN_URL}  # xml namespace
 
 
 def get_connection_string(connection=None):
@@ -132,27 +137,29 @@ class DbManager(BaseDbManager):
     subcellular_locations = {}
     tissues = {}
 
-    def db_import_xml(self, url=None, force_download=False, taxids=None, silent=False):
+    def db_import_xml(self, url: Iterable[str] = None, force_download: bool = False, taxids: Iterable[int] = None,
+                      silent: bool = False):
         """Updates the CTD database
         
         1. downloads gzipped XML
+        2. Extracts gzipped XML
         2. drops all tables in database
         3. creates all tables in database
         4. import XML
         5. close session
 
         :param Optional[list[int]] taxids: list of NCBI taxonomy identifier
-        :param str url: iterable of URL strings
+        :param Iterable[str] url: iterable of URL strings
         :param bool force_download: force method to download
-        :param bool silent:
+        :param bool silent: Not stdout if True.
         """
         log.info('Update UniProt database from {}'.format(url))
 
         self._drop_tables()
-        xml_gzipped_file_path, version_file_path = self.download(url, force_download)
+        xml_file_path, version_file_path = self.download_and_extract(url, force_download)
         self._create_tables()
         self.import_version(version_file_path)
-        self.import_xml(xml_gzipped_file_path, taxids, silent)
+        self.import_xml(xml_file_path, taxids, silent)
         self.session.close()
 
     def import_version(self, version_file_path):
@@ -174,87 +181,32 @@ class DbManager(BaseDbManager):
 
         self.session.commit()
 
-    def import_xml(self, xml_gzipped_file_path, taxids=None, silent=False):
+    def import_xml(self, xml_file_path, taxids=None, silent=False):
         """Imports XML
 
-        :param str xml_gzipped_file_path: path to XML file
+        :param str xml_file_path: path to XML file
         :param Optional[list[int]] taxids: NCBI taxonomy identifier
         :param bool silent: no output if True
         """
         version = self.session.query(models.Version).filter(models.Version.knowledgebase == 'Swiss-Prot').first()
         version.import_start_date = datetime.now()
 
-        entry_xml = '<entries>'
-        number_of_entries = 0
-        interval = 1000
-        start = False
+        log.info('Load gzipped XML from {}'.format(xml_file_path))
 
-        if sys.platform in ('linux', 'linux2', 'darwin'):
-            log.info('Load gzipped XML from {}'.format(xml_gzipped_file_path))
+        doc = iterparse(xml_file_path, events=('start', 'end'))
 
-            zcat_command = 'gzcat' if sys.platform == 'darwin' else 'zcat'
+        batch_commit_after = 100
+        counter = 0
 
-            number_of_lines = int(getoutput("{} {} | wc -l".format(zcat_command, xml_gzipped_file_path)))
-
-            tqdm_desc = 'Import {} lines'.format(number_of_lines)
-
-        else:
-            print('bin was anderes')
-            number_of_lines = None
-            tqdm_desc = None
-
-        with gzip.open(xml_gzipped_file_path) as fd:
-
-            for line in tqdm(fd, desc=tqdm_desc, total=number_of_lines, mininterval=1, disable=silent):
-
-                end_of_file = line.startswith(b"</uniprot>")
-
-                if line.startswith(b"<entry "):
-                    start = True
-
-                elif end_of_file:
-                    start = False
-
-                if start:
-                    entry_xml += line.decode("utf-8")
-
-                if line.startswith(b"</entry>") or end_of_file:
-                    number_of_entries += 1
-                    start = False
-
-                    if number_of_entries == interval or end_of_file:
-
-                        entry_xml += "</entries>"
-                        self.insert_entries(entry_xml, taxids)
-
-                        if end_of_file:
-                            break
-
-                        else:
-                            entry_xml = "<entries>"
-                            number_of_entries = 0
+        for action, elem in tqdm(doc, mininterval=1, disable=silent):
+            if action == 'end' and elem.tag == f'{{{XN_URL}}}entry':
+                counter += 1
+                self.insert_entry(elem, taxids)
+                if counter%batch_commit_after == 0:
+                    self.session.commit()
+                elem.clear()
 
         version.import_completed_date = datetime.now()
-        self.session.commit()
-
-    def insert_entries(self, entries_xml, taxids=None):
-        """Inserts UniProt entries from XML
-
-        :param str entries_xml: XML string
-        :param Optional[list[int]] taxids: NCBI taxonomy IDs
-        """
-
-        entries = etree.fromstring(entries_xml)
-        del entries_xml
-
-        for entry in entries:
-            self.insert_entry(entry, taxids)
-            entry.clear()
-            del entry
-
-        entries.clear()
-        del entries
-
         self.session.commit()
 
     # profile
@@ -264,7 +216,7 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :param taxids: Optional[iter[int]] taxids: NCBI taxonomy IDs
         """
-        entry_dict = entry.attrib
+        entry_dict = dict(entry.attrib)
         entry_dict['created'] = datetime.strptime(entry_dict['created'], '%Y-%m-%d')
         entry_dict['modified'] = datetime.strptime(entry_dict['modified'], '%Y-%m-%d')
 
@@ -340,7 +292,7 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :return: :class:`pyuniprot.manager.models.Sequence` object
         """
-        seq_tag = entry.find("./sequence")
+        seq_tag = entry.find("./n:sequence", namespaces=XN)
         seq = seq_tag.text
         seq_tag.clear()
         return models.Sequence(sequence=seq)
@@ -353,8 +305,8 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.TissueInReference` objects
         """
         tissue_in_references = []
-        query = "./reference/source/tissue"
-        tissues = {x.text for x in entry.iterfind(query)}
+        query = "./n:reference/n:source/n:tissue"
+        tissues = {x.text for x in entry.iterfind(query, namespaces=XN)}
 
         for tissue in tissues:
 
@@ -374,9 +326,9 @@ class DbManager(BaseDbManager):
         """
         tissue_specificities = []
 
-        query = "./comment[@type='tissue specificity']/text"
+        query = "./n:comment[@type='tissue specificity']/n:text"
 
-        for ts in entry.iterfind(query):
+        for ts in entry.iterfind(query, namespaces=XN):
             tissue_specificities.append(models.TissueSpecificity(comment=ts.text))
 
         return tissue_specificities
@@ -389,8 +341,8 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.SubcellularLocation` object
         """
         subcellular_locations = []
-        query = './comment/subcellularLocation/location'
-        sls = {x.text for x in entry.iterfind(query)}
+        query = './n:comment/n:subcellularLocation/location'
+        sls = {x.text for x in entry.iterfind(query, namespaces=XN)}
 
         for sl in sls:
 
@@ -409,7 +361,7 @@ class DbManager(BaseDbManager):
         """
         keyword_objects = []
 
-        for keyword in entry.iterfind("./keyword"):
+        for keyword in entry.iterfind("./n:keyword", namespaces=XN):
             identifier = keyword.get('id')
             name = keyword.text
             keyword_hash = hash(identifier)
@@ -429,7 +381,7 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :return: unique entry name
         """
-        name = entry.find('./name').text
+        name = entry.find('./n:name', namespaces=XN).text
         return name
 
     def get_disease_comments(self, entry):
@@ -440,12 +392,12 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.Disease` objects
         """
         disease_comments = []
-        query = "./comment[@type='disease']"
+        query = "./n:comment[@type='disease']"
 
-        for disease_comment in entry.iterfind(query):
-            value_dict = {'comment': disease_comment.find('./text').text}
+        for disease_comment in entry.iterfind(query, namespaces=XN):
+            value_dict = {'comment': disease_comment.find('./n:text', namespaces=XN).text}
 
-            disease = disease_comment.find("./disease")
+            disease = disease_comment.find("./n:disease", namespaces=XN)
 
             if disease is not None:
                 disease_dict = {'identifier': disease.get('id')}
@@ -478,8 +430,8 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.AlternativeFullName` objects
         """
         names = []
-        query = "./protein/alternativeName/fullName"
-        for name in entry.iterfind(query):
+        query = "./n:protein/n:alternativeName/n:fullName"
+        for name in entry.iterfind(query, namespaces=XN):
             names.append(models.AlternativeFullName(name=name.text))
 
         return names
@@ -493,8 +445,8 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.AlternativeShortName` objects
         """
         names = []
-        query = "./protein/alternativeName/shortName"
-        for name in entry.iterfind(query):
+        query = "./n:protein/n:alternativeName/n:shortName"
+        for name in entry.iterfind(query, namespaces=XN):
             names.append(models.AlternativeShortName(name=name.text))
 
         return names
@@ -509,7 +461,7 @@ class DbManager(BaseDbManager):
         """
         ec_numbers = []
 
-        for ec in entry.iterfind("./protein/recommendedName/ecNumber"):
+        for ec in entry.iterfind("./n:protein/n:recommendedName/n:ecNumber", namespaces=XN):
             ec_numbers.append(models.ECNumber(ec_number=ec.text))
         return ec_numbers
 
@@ -521,7 +473,7 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :return: str
         """
-        gene_name = entry.find("./gene/name[@type='primary']")
+        gene_name = entry.find("./n:gene/n:name[@type='primary']", namespaces=XN)
 
         return gene_name.text if gene_name is not None and gene_name.text.strip() else None
 
@@ -535,7 +487,7 @@ class DbManager(BaseDbManager):
         """
         alternative_gene_names = []
 
-        for alternative_gene_name in entry.iterfind("./gene/name"):
+        for alternative_gene_name in entry.iterfind("./n:gene/n:name", namespaces=XN):
 
             if alternative_gene_name.attrib['type'] != 'primary':
 
@@ -556,7 +508,7 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :return: list of :class:`pyuniprot.manager.models.Accession` objects
         """
-        return [models.Accession(accession=x.text) for x in entry.iterfind("./accession")]
+        return [models.Accession(accession=x.text) for x in entry.iterfind("./n:accession", namespaces=XN)]
 
     @classmethod
     def get_db_references(cls, entry):
@@ -568,7 +520,7 @@ class DbManager(BaseDbManager):
         """
         db_refs = []
 
-        for db_ref in entry.iterfind("./dbReference"):
+        for db_ref in entry.iterfind("./n:dbReference", namespaces=XN):
 
             db_ref_dict = {'identifier': db_ref.attrib['id'], 'type_': db_ref.attrib['type']}
             db_refs.append(models.DbReference(**db_ref_dict))
@@ -595,7 +547,7 @@ class DbManager(BaseDbManager):
         """
         features = []
 
-        for feature in entry.iterfind("./feature"):
+        for feature in entry.iterfind("./n:feature", namespaces=XN):
 
             feature_dict = {
                 'description': feature.attrib.get('description'),
@@ -614,8 +566,8 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :rtype: int
         """
-        query = "./organism/dbReference[@type='NCBI Taxonomy']"
-        return int(entry.find(query).get('id'))
+        query = "./n:organism/n:dbReference[@type='NCBI Taxonomy']"
+        return int(entry.find(query, namespaces=XN).get('id'))
 
     @classmethod
     def get_recommended_protein_name(cls, entry):
@@ -625,12 +577,12 @@ class DbManager(BaseDbManager):
         :param entry: XML node entry
         :return: (str, str) => (full, short)
         """
-        query_full = "./protein/recommendedName/fullName"
-        full_name = entry.find(query_full).text
+        query_full = "./n:protein/n:recommendedName/n:fullName"
+        full_name = entry.find(query_full, namespaces=XN).text
 
         short_name = None
-        query_short = "./protein/recommendedName/shortName"
-        short_name_tag = entry.find(query_short)
+        query_short = "./n:protein/n:recommendedName/n:shortName"
+        short_name_tag = entry.find(query_short, namespaces=XN)
         if short_name_tag is not None:
             short_name = short_name_tag.text
 
@@ -645,8 +597,8 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.OrganismHost` objects
         """
 
-        query = "./organismHost/dbReference[@type='NCBI Taxonomy']"
-        return [models.OrganismHost(taxid=x.get('id')) for x in entry.iterfind(query)]
+        query = "./n:organismHost/n:dbReference[@type='NCBI Taxonomy']"
+        return [models.OrganismHost(taxid=x.get('id')) for x in entry.iterfind(query, namespaces=XN)]
 
     def get_pmids(self, entry):
         """
@@ -657,9 +609,9 @@ class DbManager(BaseDbManager):
         """
         pmids = []
 
-        for citation in entry.iterfind("./reference/citation"):
+        for citation in entry.iterfind("./n:reference/n:citation", namespaces=XN):
 
-            for pubmed_ref in citation.iterfind('dbReference[@type="PubMed"]'):
+            for pubmed_ref in citation.iterfind('n:dbReference[@type="PubMed"]', namespaces=XN):
 
                 pmid_number = pubmed_ref.get('id')
 
@@ -671,14 +623,14 @@ class DbManager(BaseDbManager):
                     pmids.append(pmid_sqlalchemy_obj)
 
                 else:
-                    pmid_dict = citation.attrib
+                    pmid_dict = dict(citation.attrib)
                     if not re.search('^\d+$', pmid_dict['volume']):
                         pmid_dict['volume'] = -1
 
                     del pmid_dict['type'] # not needed because already filtered for PubMed
 
                     pmid_dict.update(pmid=pmid_number)
-                    title_tag = citation.find('./title')
+                    title_tag = citation.find('./n:title', namespaces=XN)
 
                     if title_tag is not None:
                         pmid_dict.update(title=title_tag.text)
@@ -702,9 +654,9 @@ class DbManager(BaseDbManager):
         :return: list of :class:`pyuniprot.manager.models.Function` objects
         """
         comments = []
-        query = "./comment[@type='function']"
-        for comment in entry.iterfind(query):
-            text = comment.find('./text').text
+        query = "./n:comment[@type='function']"
+        for comment in entry.iterfind(query, namespaces=XN):
+            text = comment.find('./n:text', namespaces=XN).text
             comments.append(models.Function(text=text))
 
         return comments
@@ -716,7 +668,7 @@ class DbManager(BaseDbManager):
         return dtypes
 
     @classmethod
-    def download(cls, url=None, force_download=False):
+    def download_and_extract(cls, url=None, force_download=False):
         """Downloads uniprot_sprot.xml.gz and reldate.txt (release date information) from URL or file path
 
         .. note::
@@ -735,6 +687,7 @@ class DbManager(BaseDbManager):
             version_url = os.path.join(defaults.XML_DIR_NAME, defaults.VERSION_FILE_NAME)
 
         xml_file_path = cls.get_path_to_file_from_url(url)
+        xml_file_path_extracted = xml_file_path.split(".gz")[0]
         version_file_path = cls.get_path_to_file_from_url(version_url)
 
         if force_download or not os.path.exists(xml_file_path):
@@ -751,7 +704,13 @@ class DbManager(BaseDbManager):
                 shutil.copyfile(url, xml_file_path)
                 shutil.copyfile(version_url, version_file_path)
 
-        return xml_file_path, version_file_path
+            log.info('extract {}'.format(xml_file_path))
+
+            with gzip.open(xml_file_path, 'rb') as f_in:
+                with open(xml_file_path_extracted, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+
+        return xml_file_path_extracted, version_file_path
 
     @classmethod
     def get_path_to_file_from_url(cls, url):
@@ -809,7 +768,8 @@ class DbManager(BaseDbManager):
         fd.close()
 
 
-def update(connection=None, urls=None, force_download=False, taxids=None, silent=False):
+def update(connection=None, urls: Iterable[str] = None,
+           force_download: bool = False, taxids: Iterable[int] = None, silent: bool = False):
     """Updates CTD database
 
     :param urls: list of urls to download
@@ -819,6 +779,10 @@ def update(connection=None, urls=None, force_download=False, taxids=None, silent
     :param force_download: force method to download
     :type force_download: bool
     :param int,list,tuple taxids: int or iterable of NCBI taxonomy identifiers (default is None = load all)
+    :type taxids: Iterable[int]
+    :param taxids: NCBI Taxonomy IDs to be imported
+    :type silent: bool
+    :param silent: If `True` no prints in stdout.
     """
     if isinstance(taxids, int):
         taxids = (taxids,)
